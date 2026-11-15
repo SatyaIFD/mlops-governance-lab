@@ -1,184 +1,158 @@
 import os
-import sys
+import shutil
 from pathlib import Path
 
 import mlflow
+import mlflow.sklearn
 import numpy as np
 import pandas as pd
 from mlflow.models import infer_signature
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import f1_score, roc_auc_score
+from mlflow.tracking import MlflowClient
+from sklearn.metrics import f1_score, precision_recall_curve, roc_auc_score
 
-SRC_DIR = Path(__file__).resolve().parents[1]
-SERVICE_ROOT = SRC_DIR.parent
-REPO_ROOT = (
-    SERVICE_ROOT.parent
-    if (SERVICE_ROOT.parent / "docker-compose.yml").exists()
-    else SERVICE_ROOT
-)
-if str(SERVICE_ROOT) not in sys.path:
-    sys.path.insert(0, str(SERVICE_ROOT))
-
-from src.features.velocity import (
-    CANONICAL_AML_FEATURES,
-    StreamingStateManager,
-)
-from src.models.anomaly_detector import (
-    TRUSTED_SKOPS_TYPES,
-    AMLAnomalyDetector,
-)
-from src.streaming.generator import ensure_dataset_exists
+from src.features.velocity import CANONICAL_AML_FEATURES, StreamingStateManager
+from src.ingestion.stream_ingestor import StreamingIngestionEngine
+from src.models.anomaly_detector import AMLAnomalyDetector, TRUSTED_SKOPS_TYPES
+from src.streaming.generator import transaction_stream_generator
 
 
-def _extract_label(tx: dict) -> int:
-    for key in ("Is_laundering", "Is_Laundering", "is_laundering", "Target"):
-        if key in tx and tx[key] is not None and str(tx[key]).strip() != "":
-            return 1 if int(float(tx[key])) == 1 else 0
-    raise ValueError(
-        f"Missing required ground-truth label ('Is_laundering' or 'Is_Laundering') in record: {list(tx.keys())}"
+def select_empirical_threshold(y_val: pd.Series, val_probs: np.ndarray) -> float:
+    """Selects the probability threshold maximizing F1 on validation data subject to recall >= 0.25 (falling back to unconstrained F1)."""
+    precisions, recalls, thresholds = precision_recall_curve(y_val, val_probs)
+    if len(thresholds) == 0:
+        return 0.50
+    f1_scores = (2 * precisions[:-1] * recalls[:-1]) / (
+        precisions[:-1] + recalls[:-1] + 1e-9
     )
+    valid_mask = recalls[:-1] >= 0.25
+    if np.any(valid_mask):
+        masked_f1 = np.where(valid_mask, f1_scores, -1.0)
+        best_idx = int(np.argmax(masked_f1))
+    else:
+        best_idx = int(np.argmax(f1_scores))
+    raw_cutoff = float(thresholds[best_idx])
+    return round(max(0.25, min(0.85, raw_cutoff)), 2)
 
 
 def prepare_training_data(
     csv_path: Path, warmup_rows: int = 50000, train_rows: int = 50000
 ) -> pd.DataFrame:
+    """Streams warmup_rows + train_rows through StreamingStateManager and returns the enriched training slice."""
     total_rows = warmup_rows + train_rows
     print(
         f"🧠 Building historical 7-feature state matrix ({warmup_rows} warmup + {train_rows} training rows)..."
     )
-    ensure_dataset_exists(csv_path)
-
-    df = pd.read_csv(csv_path, nrows=total_rows)
-
-    if "Date" in df.columns and "Time" in df.columns:
-        df["Timestamp"] = pd.to_datetime(
-            df["Date"].astype(str) + " " + df["Time"].astype(str)
-        )
-    elif "Timestamp" in df.columns:
-        df["Timestamp"] = pd.to_datetime(df["Timestamp"])
-    else:
-        raise ValueError(
-            "Dataset must contain 'Timestamp' or ('Date' and 'Time') columns."
-        )
-
-    df = df.sort_values("Timestamp").reset_index(drop=True)
-
-    manager = StreamingStateManager()
-    enriched_records = []
-
-    for idx, tx in enumerate(df.to_dict("records")):
-        target = _extract_label(tx)
-        enriched_tx = manager.update_and_enrich(tx)
-        enriched_tx["Is_laundering"] = target
-        if idx >= warmup_rows or len(df) <= warmup_rows:
-            enriched_records.append(enriched_tx)
-
-    return pd.DataFrame(enriched_records)
-
-
-def select_empirical_threshold(y_true: np.ndarray, probs: np.ndarray) -> float:
-    """Selects the probability threshold maximizing F1 on validation data subject to recall >= 0.25 (falling back to unconstrained F1)."""
-    if len(np.unique(y_true)) < 2:
-        return 0.40
-    best_thresh = 0.40
-    best_f1 = -1.0
-    for candidate in np.linspace(0.25, 0.75, 21):
-        preds = (probs >= candidate).astype(int)
-        pos = int((y_true == 1).sum())
-        rec = float(((preds == 1) & (y_true == 1)).sum() / pos) if pos > 0 else 0.0
-        score = float(f1_score(y_true, preds, zero_division=0))
-        if rec >= 0.25 and score >= best_f1:
-            best_f1 = score
-            best_thresh = float(round(candidate, 2))
-    if best_f1 < 0:
-        for candidate in np.linspace(0.25, 0.75, 11):
-            preds = (probs >= candidate).astype(int)
-            score = float(f1_score(y_true, preds, zero_division=0))
-            if score > best_f1:
-                best_f1 = score
-                best_thresh = float(round(candidate, 2))
-    return best_thresh
-
-
-def train_and_register():
-    db_path = REPO_ROOT / "mlflow.db"
-    data_path = (
-        REPO_ROOT / "data" / "SAML-D.csv"
-        if (REPO_ROOT / "data" / "SAML-D.csv").exists()
-        else SERVICE_ROOT / "data" / "SAML-D.csv"
+    tmp_dlq = csv_path.parent / ".train_dlq_tmp"
+    pseudonymize = os.getenv("AML_PSEUDONYMIZE_ACCOUNTS", "1") == "1"
+    ingestor = StreamingIngestionEngine(
+        dlq_output_dir=tmp_dlq, pseudonymize_accounts=pseudonymize
     )
-    skops_artifact_path = SERVICE_ROOT / "artifacts" / "aml_streaming_model"
+    state_manager = StreamingStateManager()
+    enriched_records = []
+    try:
+        for idx, raw_tx in enumerate(
+            transaction_stream_generator(csv_path, delay_seconds=0.0)
+        ):
+            if idx >= total_rows:
+                break
+            is_valid, clean_tx = ingestor.validate_and_route(raw_tx)
+            if not is_valid or clean_tx is None:
+                continue
+            enriched = state_manager.update_and_enrich(clean_tx)
+            if idx >= warmup_rows:
+                row = {col: enriched[col] for col in CANONICAL_AML_FEATURES}
+                row["Is_laundering"] = int(raw_tx.get("Is_laundering", 0))
+                enriched_records.append(row)
+    finally:
+        shutil.rmtree(tmp_dlq, ignore_errors=True)
+    df = pd.DataFrame(enriched_records)
+    return df
 
+
+def execute_training_pipeline():
+    root_dir = Path(__file__).resolve().parents[2]
+    data_path = Path(os.getenv("AML_DATA_PATH", str(root_dir / "data" / "SAML-D.csv")))
+    artifacts_dir = root_dir / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    skops_artifact_path = artifacts_dir / "aml_streaming_model"
+
+    db_path = root_dir.parent / "mlflow.db"
     tracking_uri = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{db_path}")
     mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_experiment("aml_streaming_detection")
+
+    mlruns_dir = root_dir.parent / "mlruns"
+    mlruns_dir.mkdir(parents=True, exist_ok=True)
+    exp_name = "aml_streaming_governance"
+    client = MlflowClient()
+    if client.get_experiment_by_name(exp_name) is None:
+        client.create_experiment(exp_name, artifact_location=mlruns_dir.as_uri())
+    mlflow.set_experiment(exp_name)
 
     warmup_rows = 50000
     train_rows = 50000
     df = prepare_training_data(
         data_path, warmup_rows=warmup_rows, train_rows=train_rows
     )
-    if df["Is_laundering"].nunique() < 2:
-        raise RuntimeError(
-            "Training dataset contains only a single class; cannot fit a valid binary classifier."
-        )
+    split_idx = int(len(df) * 0.80)
+    train_split = df.iloc[:split_idx].reset_index(drop=True)
+    val_split = df.iloc[split_idx:].reset_index(drop=True)
 
-    split_idx = int(len(df) * 0.8)
-    train_df, val_df = df.iloc[:split_idx], df.iloc[split_idx:]
+    X_train = train_split[CANONICAL_AML_FEATURES]
+    X_val = val_split[CANONICAL_AML_FEATURES]
+    y_val = val_split["Is_laundering"]
 
-    X_train = train_df[CANONICAL_AML_FEATURES]
-    y_train = train_df["Is_laundering"].astype(int)
-    X_val = val_df[CANONICAL_AML_FEATURES]
-    y_val = val_df["Is_laundering"].astype(int)
+    with mlflow.start_run(run_name="stateful_rf_7features") as run:
+        detector = AMLAnomalyDetector()
+        detector.train(train_split, training_window_end_row=warmup_rows + train_rows)
 
-    with mlflow.start_run(run_name="random_forest_7feature_calibrated") as run:
-        model = RandomForestClassifier(
-            n_estimators=50,
-            max_depth=10,
-            class_weight="balanced",
-            random_state=42,
-            n_jobs=-1,
-        )
-        model.fit(X_train, y_train)
+        val_probs = detector.model.predict_proba(X_val)[:, 1]
+        empirical_cutoff = select_empirical_threshold(y_val, val_probs)
+        detector.threshold = empirical_cutoff
+        val_preds = (val_probs >= empirical_cutoff).astype(int)
 
-        val_probs = model.predict_proba(X_val)[:, 1]
         val_auc = (
-            float(roc_auc_score(y_val, val_probs))
-            if y_val.nunique() > 1
-            else float(roc_auc_score(y_train, model.predict_proba(X_train)[:, 1]))
+            float(roc_auc_score(y_val, val_probs)) if len(np.unique(y_val)) > 1 else 0.5
         )
-        optimal_threshold = select_empirical_threshold(y_val.to_numpy(), val_probs)
+        val_f1 = float(f1_score(y_val, val_preds, zero_division=0))
 
-        mlflow.log_metric("val_roc_auc", val_auc)
-        mlflow.log_param("n_estimators", 50)
-        mlflow.log_param("feature_count", len(CANONICAL_AML_FEATURES))
-        mlflow.log_param("calibrated_threshold", optimal_threshold)
+        mlflow.log_params(
+            {
+                "model_type": "RandomForestClassifier",
+                "n_estimators": 150,
+                "max_depth": 12,
+                "features": ",".join(CANONICAL_AML_FEATURES),
+                "calibrated_threshold": empirical_cutoff,
+                "training_window_end_row": detector.training_window_end_row,
+            }
+        )
+        mlflow.log_metrics(
+            {
+                "val_roc_auc": round(val_auc, 4),
+                "val_f1_score": round(val_f1, 4),
+            }
+        )
 
-        detector = AMLAnomalyDetector(threshold=optimal_threshold)
-        detector.model = model
-        detector.training_window_end_row = warmup_rows + train_rows
+        signature = infer_signature(
+            X_train, detector.model.predict_proba(X_train)[:, 1]
+        )
+        mlflow.sklearn.log_model(
+            sk_model=detector.model,
+            artifact_path="aml_model",
+            registered_model_name="aml_streaming_model",
+            signature=signature,
+            skops_trusted_types=TRUSTED_SKOPS_TYPES,
+        )
         detector.save(skops_artifact_path, mlflow_run_id=run.info.run_id)
-
-        signature = infer_signature(X_train, model.predict_proba(X_train)[:, 1])
-        try:
-            mlflow.sklearn.log_model(
-                sk_model=model,
-                artifact_path="aml_model",
-                registered_model_name="aml_streaming_model",
-                signature=signature,
-                skops_trusted_types=TRUSTED_SKOPS_TYPES,
-            )
-        except TypeError:
-            mlflow.sklearn.log_model(
-                sk_model=model,
-                artifact_path="aml_model",
-                registered_model_name="aml_streaming_model",
-                skops_trusted_types=TRUSTED_SKOPS_TYPES,
-            )
+        mlflow.log_artifact(str(skops_artifact_path), artifact_path="skops_bundle")
+        mlflow.log_artifact(
+            str(skops_artifact_path.with_suffix(".meta.json")),
+            artifact_path="skops_bundle",
+        )
         print(
-            f"💾 7-feature AML model registered to MLflow and saved to {skops_artifact_path} (val_auc={val_auc:.4f}, threshold={optimal_threshold})."
+            f"💾 7-feature AML model registered to MLflow and saved to {skops_artifact_path} "
+            f"(val_auc={val_auc:.4f}, threshold={empirical_cutoff}, window_end={detector.training_window_end_row})."
         )
 
 
 if __name__ == "__main__":
-    train_and_register()
+    execute_training_pipeline()

@@ -1,7 +1,8 @@
 """
 Model Training & Orchestration Module - Project 1: Credit Card Fraud Detection
 Fits preprocessing strictly on the training split, splits train into 80% fit and 20% validation,
-fits an XGBoost classifier on the leakage-free scaled features, and logs ROC-AUC, PR-AUC, F1, Precision, Recall, and Accuracy to MLflow.
+selects scale_pos_weight on the validation split (maximizing validation PR-AUC subject to validation
+precision >= 0.95), and logs validation and holdout metrics to MLflow.
 """
 
 import sys
@@ -31,6 +32,48 @@ from src.ingestion.utils import (
     split_and_scale_without_leakage,
 )
 from src.training.data_splitter import prepare_stratified_splits
+
+
+def _select_validation_model(
+    X_fit: pd.DataFrame, y_fit: pd.Series, X_val: pd.DataFrame, y_val: pd.Series
+):
+    """Selects scale_pos_weight from (1.0, 2.0, 4.0) on the 20% validation split maximizing val PR-AUC subject to val precision >= 0.95."""
+    best_model = None
+    best_params = None
+    best_val_metrics = None
+    best_score = -1.0
+    for cand_spw in (1.0, 2.0, 4.0):
+        cand_params = {
+            "objective": "binary:logistic",
+            "eval_metric": "logloss",
+            "max_depth": 6,
+            "learning_rate": 0.1,
+            "scale_pos_weight": cand_spw,
+            "random_state": 42,
+        }
+        clf = xgb.XGBClassifier(**cand_params)
+        clf.fit(X_fit, y_fit, eval_set=[(X_val, y_val)], verbose=False)
+        val_probs = clf.predict_proba(X_val)[:, 1]
+        val_preds = (val_probs >= 0.50).astype(int)
+        val_prec = float(precision_score(y_val, val_preds, zero_division=0))
+        val_rec = float(recall_score(y_val, val_preds, zero_division=0))
+        val_f1 = float(f1_score(y_val, val_preds, zero_division=0))
+        val_pr_auc = float(average_precision_score(y_val, val_probs))
+        val_roc_auc = float(roc_auc_score(y_val, val_probs))
+        qualifies = val_prec >= 0.95
+        rank_score = val_pr_auc if qualifies else (val_pr_auc * 0.5)
+        if rank_score > best_score:
+            best_score = rank_score
+            best_model = clf
+            best_params = cand_params
+            best_val_metrics = {
+                "val_roc_auc": round(val_roc_auc, 4),
+                "val_pr_auc": round(val_pr_auc, 4),
+                "val_f1": round(val_f1, 4),
+                "val_precision": round(val_prec, 4),
+                "val_recall": round(val_rec, 4),
+            }
+    return best_model, best_params, best_val_metrics
 
 
 def execute_training_pipeline(processed_data_file: str, tracking_uri: str):
@@ -86,25 +129,15 @@ def execute_training_pipeline(processed_data_file: str, tracking_uri: str):
     )
 
     with mlflow.start_run() as run:
-        print(f"🚀 Training scaled model inside active run: {run.info.run_id}")
-        params = {
-            "objective": "binary:logistic",
-            "eval_metric": "logloss",
-            "max_depth": 6,
-            "learning_rate": 0.1,
-            "scale_pos_weight": 4.0,
-            "max_delta_step": 1,
-            "random_state": 42,
-        }
-        mlflow.log_params(params)
-
-        model = xgb.XGBClassifier(**params)
-        model.fit(
-            X_fit,
-            y_fit,
-            eval_set=[(X_val, y_val)],
-            verbose=False,
+        print(
+            f"🚀 Selecting hyperparameters on validation split inside run: {run.info.run_id}"
         )
+        model, params, val_metrics = _select_validation_model(
+            X_fit, y_fit, X_val, y_val
+        )
+        mlflow.log_params(params)
+        for mk, mv in val_metrics.items():
+            mlflow.log_metric(mk, mv)
 
         probs = model.predict_proba(X_test)[:, 1]
         preds = (probs >= 0.50).astype(int)
@@ -122,8 +155,8 @@ def execute_training_pipeline(processed_data_file: str, tracking_uri: str):
         mlflow.log_metric("precision", round(prec, 4))
         mlflow.log_metric("recall", round(rec, 4))
         print(
-            f"📊 Holdout Metrics: ROC-AUC={roc_auc:.4f} | PR-AUC={pr_auc:.4f} | "
-            f"F1={f1:.4f} | Precision={prec:.4f} | Recall={rec:.4f} | Acc={accuracy:.4f}"
+            f"📊 Selected scale_pos_weight={params['scale_pos_weight']} (val PR-AUC={val_metrics['val_pr_auc']:.4f}, val Prec={val_metrics['val_precision']:.4f}) | "
+            f"Holdout: ROC-AUC={roc_auc:.4f} | PR-AUC={pr_auc:.4f} | F1={f1:.4f} | Precision={prec:.4f} | Recall={rec:.4f}"
         )
 
         if scaler_artifact_path.exists():
