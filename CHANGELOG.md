@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.22](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.21...v0.5.22) (2026-11-15)
+
+
+### Bug Fixes
+
+* **governance:** guard purge against in-flight gzip, select P1 weights on val, and route P3 train() ([#183](https://github.com/SatyaIFD/mlops-governance-reference/issues/183)) ([e623a4b](https://github.com/SatyaIFD/mlops-governance-reference/commit/e623a4b5459032febbb3b31fae55c901eaf90587))
+
 ## [0.5.21](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.20...v0.5.21) (2026-11-15)
 
 
