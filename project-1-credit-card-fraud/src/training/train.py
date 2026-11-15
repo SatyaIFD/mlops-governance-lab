@@ -92,6 +92,8 @@ def execute_training_pipeline(processed_data_file: str, tracking_uri: str):
             "eval_metric": "logloss",
             "max_depth": 6,
             "learning_rate": 0.1,
+            "scale_pos_weight": 4.0,
+            "max_delta_step": 1,
             "random_state": 42,
         }
         mlflow.log_params(params)

@@ -1,55 +1,55 @@
 {
-  "model_uri": "models:/fraud_detection_xgb/10",
-  "mlflow_run_id": "5f2a0bbf1bcc41808a7b9ab50b861540",
+  "model_uri": "models:/fraud_detection_xgb/11",
+  "mlflow_run_id": "3ec7c2e5e9b74448a783011f29a7ac2e",
   "served_decision_threshold": 0.5,
   "audit_type": "operational_segment_performance_and_informational_flag_rate",
   "performance_metrics": {
-    "test_roc_auc": 0.9659,
-    "test_pr_auc": 0.8166,
-    "overall_recall": 0.7158,
+    "test_roc_auc": 0.9603,
+    "test_pr_auc": 0.7909,
+    "overall_recall": 0.7579,
     "overall_recall_95_ci": [
-      0.6181,
-      0.7967
+      0.6628,
+      0.8329
     ],
-    "overall_precision": 0.9855
+    "overall_precision": 0.9474
   },
   "high_value_segment": {
     "count": 11203,
-    "flagged_count": 18,
+    "flagged_count": 22,
     "actual_frauds": 26,
     "fraud_prevalence_pct": 0.232,
-    "true_positives": 17,
-    "flag_rate": 0.001607,
-    "recall": 0.6538,
+    "true_positives": 19,
+    "flag_rate": 0.001964,
+    "recall": 0.7308,
     "recall_95_ci": [
-      0.4622,
-      0.8059
+      0.5392,
+      0.863
     ],
-    "precision": 0.9444
+    "precision": 0.8636
   },
   "low_value_segment": {
     "count": 45543,
-    "flagged_count": 51,
+    "flagged_count": 54,
     "actual_frauds": 69,
     "fraud_prevalence_pct": 0.152,
-    "true_positives": 51,
-    "flag_rate": 0.00112,
-    "recall": 0.7391,
+    "true_positives": 53,
+    "flag_rate": 0.001186,
+    "recall": 0.7681,
     "recall_95_ci": [
-      0.6249,
-      0.8281
+      0.656,
+      0.8519
     ],
-    "precision": 1.0
+    "precision": 0.9815
   },
   "informational_segment_flag_rate_telemetry": {
-    "high_value_flag_rate": 0.001607,
-    "low_value_flag_rate": 0.00112,
+    "high_value_flag_rate": 0.001964,
+    "low_value_flag_rate": 0.001186,
     "high_value_fraud_prevalence_pct": 0.232,
     "low_value_fraud_prevalence_pct": 0.152,
-    "disparate_impact_ratio": 1.4348,
+    "disparate_impact_ratio": 1.656,
     "di_95_ci": [
-      0.8387,
-      2.4546
+      1.0093,
+      2.7179
     ],
     "within_80_125_band": false,
     "note": "Informational operational metric only; transaction amount tier is not a protected demographic attribute and higher-amount tiers exhibit higher base fraud prevalence (0.232% vs 0.152%)."
