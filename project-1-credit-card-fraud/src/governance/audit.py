@@ -161,13 +161,22 @@ def run_fairness_audit(enforce_gate: bool = False) -> dict:
     )
     within_80_125_band = bool(0.80 <= disparity_ratio <= 1.25)
 
-    # Business-requirement discrimination gate on full holdout set (n=56,746, 95 frauds):
-    # ROC-AUC >= 0.90 and PR-AUC >= 0.75 (threshold-independent ranking metrics, avoiding small-N discrete step fragility).
-    # Operating-point recall/precision (with 95% Wilson CIs) and segment flag-rate ratios are recorded as diagnostic telemetry.
-    performance_gate_passed = bool(roc_auc >= 0.90 and pr_auc >= 0.75)
+    # Enforces ranking discrimination (ROC-AUC >= 0.90, PR-AUC >= 0.75) AND deployed 0.50 operating-point
+    # business floors (overall_recall >= 0.60, overall_precision >= 0.80 — 11+ fraud margin above floor).
+    performance_gate_passed = bool(
+        roc_auc >= 0.90
+        and pr_auc >= 0.75
+        and overall_stats["recall"] >= 0.60
+        and overall_stats["precision"] >= 0.80
+    )
 
+    ci_band_status = (
+        "CI_ABOVE_125_BAND"
+        if di_ci[0] > 1.25
+        else ("CI_BELOW_80_BAND" if di_ci[1] < 0.80 else "CI_STRADDLES_80_125_BAND")
+    )
     dynamic_note = (
-        "Informational operational metric only; transaction amount tier is not a protected demographic attribute "
+        f"Informational operational metric only ({ci_band_status}); transaction amount tier is not a protected demographic attribute "
         f"and higher-amount tiers exhibit higher base fraud prevalence ({high_stats['fraud_prevalence_pct']:.3f}% vs {low_stats['fraud_prevalence_pct']:.3f}%)."
     )
 
@@ -193,6 +202,7 @@ def run_fairness_audit(enforce_gate: bool = False) -> dict:
             "disparate_impact_ratio": disparity_ratio,
             "di_95_ci": di_ci,
             "within_80_125_band": within_80_125_band,
+            "ci_band_status": ci_band_status,
             "note": dynamic_note,
         },
         "performance_gate_passed": performance_gate_passed,

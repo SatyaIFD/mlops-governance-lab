@@ -11,6 +11,7 @@ import re
 import shutil
 import sqlite3
 import sys
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,7 +35,7 @@ def _backup_path_for(data_file: Path) -> Path:
 
 
 def _tmp_path_for(data_file: Path) -> Path:
-    return data_file.with_suffix(data_file.suffix + ".tmp")
+    return data_file.with_suffix(data_file.suffix + ".purge.tmp")
 
 
 def _lock_path_for(data_file: Path) -> Path:
@@ -83,6 +84,22 @@ def _compute_target_tokens(
     )
     tokens.add(hmac_token)
     return tokens
+
+
+def _wait_for_inflight_compressors(data_file: Path, timeout_s: float = 5.0) -> None:
+    """Waits for any background *.gz.tmp compression files in data_file.parent to finish before staging."""
+    if not data_file.parent.is_dir():
+        return
+    deadline = time.monotonic() + timeout_s
+    while True:
+        inflight = list(data_file.parent.glob("*.gz.tmp"))
+        if not inflight:
+            return
+        if time.monotonic() >= deadline:
+            raise PurgeError(
+                f"Refusing to purge while background compression is in flight: {[p.name for p in inflight]}"
+            )
+        time.sleep(0.05)
 
 
 def _discover_jsonl_targets(data_file: Path) -> list[Path]:
@@ -409,54 +426,54 @@ def execute_right_to_be_forgotten(
             }
             _write_journal(journal_file, journal_state)
             try:
-                file_rows_removed = _stream_stage_file(
-                    data_file,
-                    _tmp_path_for(data_file),
-                    target_user,
-                    companion_files=companion_files,
-                    staged_meta=staged_meta,
-                )
-                if _on_before_backup_hook is not None:
-                    _on_before_backup_hook()
-                for cfile in companion_files:
-                    if cfile.is_file():
-                        shutil.copy2(cfile, _backup_path_for(cfile))
-                journal_state["state"] = "FILE_STAGED"
-                _write_journal(journal_file, journal_state)
-                if _on_staged_hook is not None:
-                    _on_staged_hook()
                 target_tokens = (
                     _compute_target_tokens(target_user, require_hmac_key=True)
                     if is_jsonl
                     else {target_user}
                 )
-                with _writer_swap_lock(companion_files):
-                    if is_jsonl and _rotation_detected(
-                        data_file, companion_files, staged_meta
-                    ):
-                        for old_c in companion_files:
-                            for p_clean in (
-                                _tmp_path_for(old_c),
-                                _backup_path_for(old_c),
-                            ):
-                                if p_clean.exists():
-                                    p_clean.unlink()
+                swapped = False
+                file_rows_removed = 0
+                for _attempt in range(3):
+                    if is_jsonl:
+                        _wait_for_inflight_compressors(data_file)
                         companion_files = _discover_jsonl_targets(data_file)
-                        staged_meta.clear()
-                        journal_state["companion_files"] = [
-                            str(p.resolve()) for p in companion_files
-                        ]
-                        file_rows_removed = _stream_stage_file(
-                            data_file,
-                            _tmp_path_for(data_file),
-                            target_user,
-                            companion_files=companion_files,
-                            staged_meta=staged_meta,
-                        )
-                        for cfile in companion_files:
+                    staged_meta.clear()
+                    journal_state["companion_files"] = [
+                        str(p.resolve()) for p in companion_files
+                    ]
+                    journal_state["state"] = "INITIATED"
+                    _write_journal(journal_file, journal_state)
+                    file_rows_removed = _stream_stage_file(
+                        data_file,
+                        _tmp_path_for(data_file),
+                        target_user,
+                        companion_files=companion_files,
+                        staged_meta=staged_meta,
+                    )
+                    if _on_before_backup_hook is not None and _attempt == 0:
+                        _on_before_backup_hook()
+                    for cfile in companion_files:
+                        if cfile.is_file():
                             shutil.copy2(cfile, _backup_path_for(cfile))
-                            os.replace(_tmp_path_for(cfile), cfile)
-                    else:
+                    journal_state["state"] = "FILE_STAGED"
+                    _write_journal(journal_file, journal_state)
+                    if _on_staged_hook is not None and _attempt == 0:
+                        _on_staged_hook()
+                    with _writer_swap_lock(companion_files):
+                        if is_jsonl and (
+                            list(data_file.parent.glob("*.gz.tmp"))
+                            or _rotation_detected(
+                                data_file, companion_files, staged_meta
+                            )
+                        ):
+                            for old_c in companion_files:
+                                for p_clean in (
+                                    _tmp_path_for(old_c),
+                                    _backup_path_for(old_c),
+                                ):
+                                    if p_clean.exists():
+                                        p_clean.unlink()
+                            continue
                         for cfile in companion_files:
                             if is_jsonl and cfile in staged_meta:
                                 file_rows_removed += _catch_up_appended_jsonl_delta(
@@ -467,6 +484,12 @@ def execute_right_to_be_forgotten(
                                     target_tokens,
                                 )
                             os.replace(_tmp_path_for(cfile), cfile)
+                        swapped = True
+                        break
+                if not swapped:
+                    raise PurgeError(
+                        "Concurrent log rotation or compression persisted across 3 staging retries."
+                    )
                 journal_state["state"] = "FILE_SWAPPED"
                 _write_journal(journal_file, journal_state)
             except Exception as e:

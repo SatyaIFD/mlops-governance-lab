@@ -1,5 +1,5 @@
 {
-  "execution_timestamp_utc": "2026-11-15T05:21:31.152091+00:00",
+  "execution_timestamp_utc": "2026-11-15T07:05:44.976036+00:00",
   "status": "COMPLETE",
   "data_governance": {
     "total_ingested": 200000,
@@ -9,9 +9,9 @@
   },
   "model_metadata": {
     "artifact_path": "aml_streaming_model",
-    "calibrated_threshold": 0.68,
-    "model_sha256": "2de43d0a6094a2ff923f17bda0f13b0b1bd3e7a609b8ef42d7209fc7c8701c59",
-    "mlflow_run_id": "426cc0e0ccd2496aa23e2b5d165a031d",
+    "calibrated_threshold": 0.62,
+    "model_sha256": "4b1e512df34d76052488d43d99689ed442bc327b8503b16e5ecc74c03528ab79",
+    "mlflow_run_id": "c29f151525cb4202a79ef32b988fa756",
     "features_used": [
       "Amount",
       "pass_through_ratio_1h",
@@ -26,12 +26,12 @@
   },
   "streaming_performance": {
     "total_processed": 100000,
-    "anomalies_flagged": 6068,
+    "anomalies_flagged": 6693,
     "replayed_alerts_preserved": 0,
-    "total_alerts_in_file": 6068,
+    "total_alerts_in_file": 6693,
     "actual_laundering_events": 122,
-    "laundering_intercepted": 29,
-    "recall_percentage": 23.77,
+    "laundering_intercepted": 32,
+    "recall_percentage": 26.23,
     "precision_percentage": 0.48
   }
 }

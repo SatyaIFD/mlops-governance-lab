@@ -462,3 +462,29 @@ def test_gdpr_purge_early_append_rollback_and_log_rotation(tmp_path, monkeypatch
     assert active_seqs == [99]  # nosec B101
     assert rot_seqs == [2, 3]  # nosec B101
     assert not list(tmp_path.glob("*.1.lock")) and not list(tmp_path.glob("*.gz.lock"))  # nosec B101
+
+
+def test_gdpr_purge_refuses_when_gz_tmp_stuck(tmp_path, monkeypatch):
+    """Verifies that execute_right_to_be_forgotten refuses when a background *.gz.tmp file is stuck in flight."""
+    import compliance.gdpr_purge as gp
+
+    monkeypatch.setenv("LOAN_HMAC_SECRET_KEY", "test-dedicated-loan-hmac-key")
+    db_file = tmp_path / "mlflow.db"
+    jsonl_file = tmp_path / "telemetry_logs.jsonl"
+    stuck_tmp = tmp_path / "telemetry_logs.jsonl.1.gz.tmp"
+    target_user = "APPLICANT_GZ_WAIT"
+    _init_mock_sqlite_db(db_file, target_user)
+    jsonl_file.write_text(
+        json.dumps({"user_id": target_user, "seq": 1}) + "\n", encoding="utf-8"
+    )
+    stuck_tmp.write_bytes(b"in-flight-gzip")
+
+    orig_wait = gp._wait_for_inflight_compressors
+    monkeypatch.setattr(
+        gp,
+        "_wait_for_inflight_compressors",
+        lambda df, timeout_s=0.1: orig_wait(df, timeout_s=0.1),
+    )
+    with pytest.raises(PurgeError, match="compression is in flight"):
+        execute_right_to_be_forgotten(target_user, str(db_file), str(jsonl_file))
+    stuck_tmp.unlink()
