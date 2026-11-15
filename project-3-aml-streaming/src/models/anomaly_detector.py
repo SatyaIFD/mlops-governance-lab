@@ -74,18 +74,16 @@ class AMLAnomalyDetector:
             raise KeyError(f"Missing required AML features: {missing}")
         return df_or_dict[active_cols].copy()
 
-    def train(
-        self, df: pd.DataFrame, training_window_end_row: int | None = None
-    ) -> None:
+    def train(self, df: pd.DataFrame, training_window_end_row: int) -> None:
         X = self._align_features(df)
         target_col = "Is_laundering" if "Is_laundering" in df.columns else "Target"
         y = df[target_col].astype(int)
         self.model.fit(X, y)
-        self.training_window_end_row = (
-            int(training_window_end_row)
-            if training_window_end_row is not None and int(training_window_end_row) > 0
-            else max(1, int(len(df)))
-        )
+        if training_window_end_row is None or int(training_window_end_row) < len(df):
+            raise ValueError(
+                f"training_window_end_row ({training_window_end_row}) must be >= training dataframe length ({len(df)})"
+            )
+        self.training_window_end_row = int(training_window_end_row)
         if hasattr(self.model, "n_jobs"):
             self.model.n_jobs = 1
 

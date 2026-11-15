@@ -268,7 +268,7 @@ def test_end_to_end_pipeline_on_synthetic_csv(tmp_path, monkeypatch):
     )
     model_path = tmp_path / "aml_streaming_model"
     det = AMLAnomalyDetector(threshold=0.50)
-    det.train(df)
+    det.train(df, training_window_end_row=len(df))
     det.save(model_path, mlflow_run_id="test_run_123")
 
     monkeypatch.setenv("AML_DATA_PATH", str(csv_path))
@@ -326,7 +326,7 @@ def test_batch_scoring_fallback_does_not_double_count(tmp_path, monkeypatch):
     )
     model_path = tmp_path / "aml_streaming_model"
     det = AMLAnomalyDetector(threshold=0.50)
-    det.train(df)
+    det.train(df, training_window_end_row=len(df))
     det.save(model_path, mlflow_run_id="test_fallback_run")
 
     monkeypatch.setattr(
@@ -370,7 +370,7 @@ def test_anomaly_detector_requires_meta_file_and_all_features(tmp_path):
     )
     artifact_file = tmp_path / "aml_streaming_model"
     det = AMLAnomalyDetector(threshold=0.55)
-    det.train(df)
+    det.train(df, training_window_end_row=len(df))
     det.save(artifact_file)
 
     with pytest.raises(KeyError, match="Missing required AML features"):
@@ -423,7 +423,7 @@ def test_recording_failure_routes_to_dlq_without_incrementing_processed_count(
     )
     model_path = tmp_path / "aml_streaming_model"
     det = AMLAnomalyDetector(threshold=0.50)
-    det.train(df)
+    det.train(df, training_window_end_row=len(df))
     det.save(model_path, mlflow_run_id="test_rec_fail")
 
     monkeypatch.setattr(
@@ -484,7 +484,7 @@ def test_pipeline_writes_failed_model_load_and_interrupted_states(
         }
     )
     det = AMLAnomalyDetector(threshold=0.50)
-    det.train(df)
+    det.train(df, training_window_end_row=len(df))
     det.save(missing_model, mlflow_run_id="interrupt_test")
 
     monkeypatch.setattr(
@@ -527,7 +527,7 @@ def test_pipeline_sigterm_signal_and_version_mismatch_rejection(tmp_path, monkey
         }
     )
     det = AMLAnomalyDetector(threshold=0.50)
-    det.train(df)
+    det.train(df, training_window_end_row=len(df))
     det.save(model_path, mlflow_run_id="sigterm_test")
 
     def _sigterm_stream(*args, **kwargs):
@@ -595,7 +595,7 @@ def test_dlq_replay_scores_anomalies_and_pipeline_preserves_replayed_alerts(
     )
     model_path = tmp_path / "aml_streaming_model"
     det = AMLAnomalyDetector(threshold=0.30)
-    det.train(df)
+    det.train(df, training_window_end_row=len(df))
     det.save(model_path, mlflow_run_id="replay_score_test")
 
     # Route a structuring payload with a bad date to DLQ, then repair the date
@@ -655,8 +655,7 @@ def test_training_window_ends_before_scoring_starts(tmp_path, monkeypatch):
     )
     df_train["Is_laundering"] = [0, 1] * 10
     det = AMLAnomalyDetector(threshold=0.50)
-    det.train(df_train)
-    det.training_window_end_row = 100000
+    det.train(df_train, training_window_end_row=100000)
     det.save(model_path, mlflow_run_id="run_overlap_test")
 
     monkeypatch.setattr(

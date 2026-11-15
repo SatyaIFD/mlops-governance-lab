@@ -7,6 +7,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import shutil
 import sqlite3
 import sys
@@ -40,19 +41,16 @@ def _lock_path_for(data_file: Path) -> Path:
     return data_file.with_suffix(data_file.suffix + ".purge.lock")
 
 
+def _base_writer_lock_for(path: Path) -> Path:
+    """Maps any active or rotated telemetry file (e.g. foo.jsonl.1.gz) to its writer lock (foo.jsonl.lock)."""
+    base_name = re.sub(r"\.jsonl(\.\d+(\.gz)?|\.gz)?$", ".jsonl", path.name)
+    return (path.parent / f"{base_name}.lock").resolve()
+
+
 @contextmanager
 def _writer_swap_lock(companion_files: list[Path]):
-    """Acquires the telemetry writer lock (.lock) across all active JSONL files strictly for delta catch-up and os.replace."""
-    lock_paths = sorted(
-        {
-            (
-                p.with_suffix(".jsonl.lock")
-                if p.name.endswith(".jsonl.gz")
-                else p.with_suffix(p.suffix + ".lock")
-            ).resolve()
-            for p in companion_files
-        }
-    )
+    """Acquires only the active base .jsonl.lock writer locks in sorted order."""
+    lock_paths = sorted({_base_writer_lock_for(p) for p in companion_files})
     with ExitStack() as stack:
         handles = [
             stack.enter_context(open(lp, "w", encoding="utf-8")) for lp in lock_paths
@@ -149,8 +147,9 @@ def _recover_pending_journal(data_file: Path) -> None:
 
 def _stage_single_jsonl(
     src_file: Path, tmp_file: Path, target_tokens: set[str]
-) -> tuple[int, int]:
+) -> tuple[int, int, int]:
     removed = 0
+    st_before = src_file.stat()
     if src_file.suffix == ".gz":
         with (
             gzip.open(src_file, "rt", encoding="utf-8") as f_in,
@@ -164,9 +163,10 @@ def _stage_single_jsonl(
                     removed += 1
                 else:
                     f_out.write(line if line.endswith("\n") else line + "\n")
-        return removed, src_file.stat().st_size
+        return removed, st_before.st_size, st_before.st_ino
 
     with open(src_file, "rb") as f_in, open(tmp_file, "w", encoding="utf-8") as f_out:
+        f_in_ino = os.fstat(f_in.fileno()).st_ino
         for raw_line in f_in:
             line = raw_line.decode("utf-8")
             if not line.strip():
@@ -177,7 +177,7 @@ def _stage_single_jsonl(
             else:
                 f_out.write(line if line.endswith("\n") else line + "\n")
         end_offset = f_in.tell()
-    return removed, end_offset
+    return removed, end_offset, f_in_ino
 
 
 def _catch_up_appended_jsonl_delta(
@@ -187,10 +187,15 @@ def _catch_up_appended_jsonl_delta(
     staged_offset: int,
     target_tokens: set[str],
 ) -> int:
-    """Reads any bytes appended to a plain .jsonl file since staged_offset under the writer lock."""
+    """Appends bytes from bak_file size -> live size into bak_file, and filtered rows from staged_offset -> live size into tmp_file."""
     if cfile.suffix == ".gz" or not cfile.is_file():
         return 0
     curr_size = cfile.stat().st_size
+    bak_size = bak_file.stat().st_size if bak_file.exists() else 0
+    if curr_size > bak_size:
+        with open(cfile, "rb") as f_in, open(bak_file, "ab") as f_bak:
+            f_in.seek(bak_size)
+            f_bak.write(f_in.read())
     if curr_size <= staged_offset:
         return 0
     removed_delta = 0
@@ -199,8 +204,6 @@ def _catch_up_appended_jsonl_delta(
         delta_bytes = f_in.read()
     if not delta_bytes:
         return 0
-    with open(bak_file, "ab") as f_bak:
-        f_bak.write(delta_bytes)
     with open(tmp_file, "a", encoding="utf-8") as f_tmp:
         for line in delta_bytes.decode("utf-8").splitlines(keepends=True):
             if not line.strip():
@@ -213,12 +216,35 @@ def _catch_up_appended_jsonl_delta(
     return removed_delta
 
 
+def _rotation_detected(
+    data_file: Path,
+    companion_files: list[Path],
+    staged_meta: dict[Path, tuple[int, int]],
+) -> bool:
+    """Returns True if any staged file was rotated (inode changed or size shrank) or new archives appeared."""
+    current_targets = [p.resolve() for p in _discover_jsonl_targets(data_file)]
+    staged_targets = [p.resolve() for p in companion_files]
+    if current_targets != staged_targets:
+        return True
+    for cfile in companion_files:
+        if not cfile.is_file() or cfile not in staged_meta:
+            return True
+        staged_offset, staged_ino = staged_meta[cfile]
+        st = cfile.stat()
+        if st.st_ino != staged_ino or st.st_size < staged_offset:
+            return True
+        bak = _backup_path_for(cfile)
+        if bak.exists() and st.st_size < bak.stat().st_size:
+            return True
+    return False
+
+
 def _stream_stage_file(
     data_file: Path,
     tmp_file: Path,
     target_user: str,
     companion_files: list[Path] | None = None,
-    staged_offsets: dict[Path, int] | None = None,
+    staged_meta: dict[Path, tuple[int, int]] | None = None,
 ) -> int:
     """Streams filtered records to tmp_file(s), preserving rows where user_id is NULL/NaN."""
     if data_file.suffix == ".jsonl" or data_file.name.endswith(".jsonl.gz"):
@@ -226,12 +252,12 @@ def _stream_stage_file(
         targets = companion_files or [data_file]
         total_removed = 0
         for cfile in targets:
-            rem, end_off = _stage_single_jsonl(
+            rem, end_off, ino = _stage_single_jsonl(
                 cfile, _tmp_path_for(cfile), target_tokens
             )
             total_removed += rem
-            if staged_offsets is not None:
-                staged_offsets[cfile] = end_off
+            if staged_meta is not None:
+                staged_meta[cfile] = (end_off, ino)
         return total_removed
 
     if data_file.suffix == ".parquet":
@@ -309,7 +335,7 @@ def _verify_purge_completion(
 
     if data_file.suffix == ".jsonl" or data_file.name.endswith(".jsonl.gz"):
         target_tokens = _compute_target_tokens(target_user, require_hmac_key=True)
-        for cfile in companion_files or [data_file]:
+        for cfile in companion_files or _discover_jsonl_targets(data_file):
             c_open = gzip.open if cfile.suffix == ".gz" else open
             with c_open(cfile, "rt", encoding="utf-8") as f:
                 for line in f:
@@ -347,6 +373,7 @@ def execute_right_to_be_forgotten(
     db_path: str,
     data_path: str,
     _inject_db_failure: bool = False,
+    _on_before_backup_hook=None,
     _on_staged_hook=None,
 ) -> dict:
     target_user = str(user_id).strip()
@@ -371,7 +398,7 @@ def execute_right_to_be_forgotten(
             companion_files = (
                 _discover_jsonl_targets(data_file) if is_jsonl else [data_file]
             )
-            staged_offsets: dict[Path, int] = {}
+            staged_meta: dict[Path, tuple[int, int]] = {}
             journal_state = {
                 "operation_id": uuid.uuid4().hex,
                 "user_id": target_user,
@@ -387,11 +414,13 @@ def execute_right_to_be_forgotten(
                     _tmp_path_for(data_file),
                     target_user,
                     companion_files=companion_files,
-                    staged_offsets=staged_offsets,
+                    staged_meta=staged_meta,
                 )
-                # Copy backups BEFORE acquiring the telemetry writer lock
+                if _on_before_backup_hook is not None:
+                    _on_before_backup_hook()
                 for cfile in companion_files:
-                    shutil.copy2(cfile, _backup_path_for(cfile))
+                    if cfile.is_file():
+                        shutil.copy2(cfile, _backup_path_for(cfile))
                 journal_state["state"] = "FILE_STAGED"
                 _write_journal(journal_file, journal_state)
                 if _on_staged_hook is not None:
@@ -402,16 +431,42 @@ def execute_right_to_be_forgotten(
                     else {target_user}
                 )
                 with _writer_swap_lock(companion_files):
-                    for cfile in companion_files:
-                        if is_jsonl and cfile in staged_offsets:
-                            file_rows_removed += _catch_up_appended_jsonl_delta(
-                                cfile,
-                                _backup_path_for(cfile),
-                                _tmp_path_for(cfile),
-                                staged_offsets[cfile],
-                                target_tokens,
-                            )
-                        os.replace(_tmp_path_for(cfile), cfile)
+                    if is_jsonl and _rotation_detected(
+                        data_file, companion_files, staged_meta
+                    ):
+                        for old_c in companion_files:
+                            for p_clean in (
+                                _tmp_path_for(old_c),
+                                _backup_path_for(old_c),
+                            ):
+                                if p_clean.exists():
+                                    p_clean.unlink()
+                        companion_files = _discover_jsonl_targets(data_file)
+                        staged_meta.clear()
+                        journal_state["companion_files"] = [
+                            str(p.resolve()) for p in companion_files
+                        ]
+                        file_rows_removed = _stream_stage_file(
+                            data_file,
+                            _tmp_path_for(data_file),
+                            target_user,
+                            companion_files=companion_files,
+                            staged_meta=staged_meta,
+                        )
+                        for cfile in companion_files:
+                            shutil.copy2(cfile, _backup_path_for(cfile))
+                            os.replace(_tmp_path_for(cfile), cfile)
+                    else:
+                        for cfile in companion_files:
+                            if is_jsonl and cfile in staged_meta:
+                                file_rows_removed += _catch_up_appended_jsonl_delta(
+                                    cfile,
+                                    _backup_path_for(cfile),
+                                    _tmp_path_for(cfile),
+                                    staged_meta[cfile][0],
+                                    target_tokens,
+                                )
+                            os.replace(_tmp_path_for(cfile), cfile)
                 journal_state["state"] = "FILE_SWAPPED"
                 _write_journal(journal_file, journal_state)
             except Exception as e:

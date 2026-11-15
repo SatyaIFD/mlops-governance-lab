@@ -1,3 +1,4 @@
+import os
 import json
 import shutil
 import sqlite3
@@ -393,3 +394,71 @@ def test_gdpr_purge_preserves_concurrent_appends_between_stage_and_swap(
         if line.strip()
     ]
     assert [r["seq"] for r in kept] == [2, 3]  # nosec B101
+
+
+def test_gdpr_purge_early_append_rollback_and_log_rotation(tmp_path, monkeypatch):
+    """Verifies no duplicate rows on early-append rollback, safe re-staging on rotation, and zero .gz.lock clutter."""
+    monkeypatch.setenv("LOAN_HMAC_SECRET_KEY", "test-dedicated-loan-hmac-key")
+    db_file = tmp_path / "mlflow.db"
+    jsonl_file = tmp_path / "telemetry_logs.jsonl"
+    target_user = "APPLICANT_ROT"
+    _init_mock_sqlite_db(db_file, target_user)
+
+    jsonl_file.write_text(
+        json.dumps({"user_id": target_user, "seq": 1})
+        + "\n"
+        + json.dumps({"user_id": "usr_hmac_keep", "seq": 2})
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def _append_before_backup():
+        with open(jsonl_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"user_id": "usr_hmac_early", "seq": 3}) + "\n")
+
+    with pytest.raises(PurgeError, match="rolled back"):
+        execute_right_to_be_forgotten(
+            target_user,
+            str(db_file),
+            str(jsonl_file),
+            _inject_db_failure=True,
+            _on_before_backup_hook=_append_before_backup,
+        )
+    rolled_seqs = [
+        json.loads(line)["seq"]
+        for line in jsonl_file.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert rolled_seqs == [1, 2, 3]  # nosec B101
+
+    # Now simulate log rotation between staging and swap
+    def _rotate_during_staging():
+        rotated = tmp_path / "telemetry_logs.jsonl.1"
+        os.replace(jsonl_file, rotated)
+        jsonl_file.write_text(
+            json.dumps({"user_id": "usr_hmac_post_rotate", "seq": 99}) + "\n",
+            encoding="utf-8",
+        )
+
+    res = execute_right_to_be_forgotten(
+        target_user,
+        str(db_file),
+        str(jsonl_file),
+        _on_staged_hook=_rotate_during_staging,
+    )
+    assert res["file_rows_removed"] == 1  # nosec B101
+    active_seqs = [
+        json.loads(line)["seq"]
+        for line in jsonl_file.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    rot_seqs = [
+        json.loads(line)["seq"]
+        for line in (tmp_path / "telemetry_logs.jsonl.1")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    ]
+    assert active_seqs == [99]  # nosec B101
+    assert rot_seqs == [2, 3]  # nosec B101
+    assert not list(tmp_path.glob("*.1.lock")) and not list(tmp_path.glob("*.gz.lock"))  # nosec B101
