@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.21](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.20...v0.5.21) (2026-11-15)
+
+
+### Bug Fixes
+
+* **governance:** deduplicate purge backup delta, handle log rotation, and gate P1 on ROC-AUC/PR-AUC ([#181](https://github.com/SatyaIFD/mlops-governance-reference/issues/181)) ([1a7ef9c](https://github.com/SatyaIFD/mlops-governance-reference/commit/1a7ef9cd00e06a3ee1ffe86f06ab1d62d0d1734a))
+
 ## [0.5.20](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.19...v0.5.20) (2026-11-14)
 
 
