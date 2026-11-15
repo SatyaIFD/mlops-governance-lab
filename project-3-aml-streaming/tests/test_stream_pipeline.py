@@ -183,7 +183,7 @@ def test_anomaly_detector_real_skops_roundtrip_and_threshold_persistence(tmp_pat
     )
     artifact_file = tmp_path / "aml_streaming_model"
     detector = AMLAnomalyDetector(threshold=0.65)
-    detector.train(df)
+    detector.train(df, training_window_end_row=len(df))
     detector.save(artifact_file)
 
     meta = json.loads(
@@ -227,7 +227,7 @@ def test_anomaly_detector_rejects_tampered_sha256(tmp_path):
     )
     artifact_file = tmp_path / "aml_streaming_model"
     detector = AMLAnomalyDetector(threshold=0.55)
-    detector.train(df)
+    detector.train(df, training_window_end_row=len(df))
     detector.save(artifact_file)
 
     meta_file = tmp_path / "aml_streaming_model.meta.json"
