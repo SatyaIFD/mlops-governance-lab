@@ -35,7 +35,7 @@ def _backup_path_for(data_file: Path) -> Path:
 
 
 def _tmp_path_for(data_file: Path) -> Path:
-    return data_file.with_suffix(data_file.suffix + ".tmp")
+    return data_file.with_suffix(data_file.suffix + ".purge.tmp")
 
 
 def _lock_path_for(data_file: Path) -> Path:
