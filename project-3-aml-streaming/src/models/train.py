@@ -60,12 +60,29 @@ def prepare_training_data(
                 continue
             enriched = state_manager.update_and_enrich(clean_tx)
             if idx >= warmup_rows:
+                if (
+                    "Is_laundering" not in raw_tx
+                    or raw_tx["Is_laundering"] is None
+                    or str(raw_tx["Is_laundering"]).strip() == ""
+                ):
+                    raise ValueError(
+                        "Missing required 'Is_laundering' target label in training stream."
+                    )
+                label_val = int(raw_tx["Is_laundering"])
+                if label_val not in (0, 1):
+                    raise ValueError(
+                        f"Invalid 'Is_laundering' label value: {label_val}"
+                    )
                 row = {col: enriched[col] for col in CANONICAL_AML_FEATURES}
-                row["Is_laundering"] = int(raw_tx.get("Is_laundering", 0))
+                row["Is_laundering"] = label_val
                 enriched_records.append(row)
     finally:
         shutil.rmtree(tmp_dlq, ignore_errors=True)
     df = pd.DataFrame(enriched_records)
+    if df.empty or df["Is_laundering"].nunique() < 2:
+        raise ValueError(
+            "Prepared training data must contain both classes (0 and 1) in 'Is_laundering'."
+        )
     return df
 
 
@@ -115,11 +132,13 @@ def execute_training_pipeline():
         )
         val_f1 = float(f1_score(y_val, val_preds, zero_division=0))
 
+        rf_params = detector.model.get_params()
         mlflow.log_params(
             {
-                "model_type": "RandomForestClassifier",
-                "n_estimators": 150,
-                "max_depth": 12,
+                "model_type": type(detector.model).__name__,
+                "n_estimators": rf_params["n_estimators"],
+                "max_depth": rf_params["max_depth"],
+                "class_weight": str(rf_params["class_weight"]),
                 "features": ",".join(CANONICAL_AML_FEATURES),
                 "calibrated_threshold": empirical_cutoff,
                 "training_window_end_row": detector.training_window_end_row,

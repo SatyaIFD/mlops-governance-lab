@@ -193,6 +193,7 @@ def run_production_audit(
         report_path.parent.mkdir(parents=True, exist_ok=True)
         with open(report_path, "w", encoding="utf-8") as f:
             json.dump(existing_report, f, indent=4)
+            f.write("\n")
         return existing_report
 
     if not iter_telemetry_log_files(log_path):

@@ -464,21 +464,36 @@ def test_gdpr_purge_early_append_rollback_and_log_rotation(tmp_path, monkeypatch
     assert not list(tmp_path.glob("*.1.lock")) and not list(tmp_path.glob("*.gz.lock"))  # nosec B101
 
 
-def test_gdpr_purge_refuses_when_gz_tmp_stuck(tmp_path, monkeypatch):
-    """Verifies that execute_right_to_be_forgotten refuses when a background *.gz.tmp file is stuck in flight."""
+def test_gdpr_purge_refuses_when_gz_tmp_stuck_and_cleans_stale_orphan(
+    tmp_path, monkeypatch
+):
+    """Verifies stale (>60s) .gz.tmp orphans are unlinked, unrelated .gz.tmp files are ignored, and active ones refuse."""
     import compliance.gdpr_purge as gp
 
     monkeypatch.setenv("LOAN_HMAC_SECRET_KEY", "test-dedicated-loan-hmac-key")
     db_file = tmp_path / "mlflow.db"
     jsonl_file = tmp_path / "telemetry_logs.jsonl"
-    stuck_tmp = tmp_path / "telemetry_logs.jsonl.1.gz.tmp"
+    stale_tmp = tmp_path / "telemetry_logs.jsonl.1.gz.tmp"
+    unrelated_tmp = tmp_path / "other_unrelated.gz.tmp"
     target_user = "APPLICANT_GZ_WAIT"
     _init_mock_sqlite_db(db_file, target_user)
     jsonl_file.write_text(
         json.dumps({"user_id": target_user, "seq": 1}) + "\n", encoding="utf-8"
     )
-    stuck_tmp.write_bytes(b"in-flight-gzip")
 
+    stale_tmp.write_bytes(b"stale-orphan")
+    old_ts = time.time() - 120.0
+    os.utime(stale_tmp, (old_ts, old_ts))
+    unrelated_tmp.write_bytes(b"unrelated")
+    res = execute_right_to_be_forgotten(target_user, str(db_file), str(jsonl_file))
+    assert res["file_rows_removed"] == 1  # nosec B101
+    assert not stale_tmp.exists()  # nosec B101
+    assert unrelated_tmp.exists()  # nosec B101
+
+    jsonl_file.write_text(
+        json.dumps({"user_id": target_user, "seq": 2}) + "\n", encoding="utf-8"
+    )
+    stale_tmp.write_bytes(b"active-inflight")
     orig_wait = gp._wait_for_inflight_compressors
     monkeypatch.setattr(
         gp,
@@ -487,4 +502,73 @@ def test_gdpr_purge_refuses_when_gz_tmp_stuck(tmp_path, monkeypatch):
     )
     with pytest.raises(PurgeError, match="compression is in flight"):
         execute_right_to_be_forgotten(target_user, str(db_file), str(jsonl_file))
-    stuck_tmp.unlink()
+    stale_tmp.unlink()
+
+
+def test_gdpr_purge_mid_compression_race_does_not_resurrect_purged_user(
+    tmp_path, monkeypatch
+):
+    """Simulates background compressor mid-read on .1 while purge runs; verifies purged user is not resurrected in .1.gz."""
+    import gzip
+    import shutil as _shutil
+    import sys as _sys
+
+    p2_root = Path(__file__).resolve().parents[1] / "project-2-loan-default"
+    if str(p2_root) not in _sys.path:
+        _sys.path.insert(0, str(p2_root))
+    from src.monitoring.observability import _compress_file_async
+
+    monkeypatch.setenv("LOAN_HMAC_SECRET_KEY", "test-dedicated-loan-hmac-key")
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    db_file = tmp_path / "mlflow.db"
+    jsonl_file = tmp_path / "telemetry_logs.jsonl"
+    rot_raw = tmp_path / "telemetry_logs.jsonl.1"
+    rot_gz = tmp_path / "telemetry_logs.jsonl.1.gz"
+    lock_path = tmp_path / "telemetry_logs.jsonl.lock"
+    target_user = "APPLICANT_RACE"
+    _init_mock_sqlite_db(db_file, target_user)
+
+    rot_raw.write_text(
+        json.dumps({"user_id": target_user, "seq": 10})
+        + "\n"
+        + json.dumps({"user_id": "usr_hmac_keep", "seq": 11})
+        + "\n",
+        encoding="utf-8",
+    )
+    jsonl_file.write_text(
+        json.dumps({"user_id": "usr_hmac_active", "seq": 12}) + "\n", encoding="utf-8"
+    )
+
+    read_started = threading.Event()
+    allow_finish_first_copy = threading.Event()
+    orig_copy = _shutil.copyfileobj
+    call_count = 0
+
+    def _hooked_copyfileobj(fsrc, fdst, *a, **kw):
+        nonlocal call_count
+        call_count += 1
+        orig_copy(fsrc, fdst, *a, **kw)
+        if call_count == 1:
+            read_started.set()
+            allow_finish_first_copy.wait(timeout=3.0)
+
+    monkeypatch.setattr(_shutil, "copyfileobj", _hooked_copyfileobj)
+    _compress_file_async(rot_raw, rot_gz, lock_path=lock_path)
+    assert read_started.wait(timeout=2.0)  # nosec B101
+    tmp_gz = rot_gz.with_suffix(".gz.tmp")
+    saved_bytes = tmp_gz.read_bytes() if tmp_gz.exists() else b""
+    if tmp_gz.exists():
+        tmp_gz.unlink()
+
+    res = execute_right_to_be_forgotten(target_user, str(db_file), str(jsonl_file))
+    assert res["file_rows_removed"] == 1  # nosec B101
+    tmp_gz.write_bytes(saved_bytes)
+    allow_finish_first_copy.set()
+    for _ in range(40):
+        if rot_gz.is_file() and not rot_raw.exists():
+            break
+        time.sleep(0.05)
+    assert rot_gz.is_file() and not rot_raw.exists()  # nosec B101
+    with gzip.open(rot_gz, "rt", encoding="utf-8") as gz_in:
+        gz_rows = [json.loads(line) for line in gz_in if line.strip()]
+    assert [r["seq"] for r in gz_rows] == [11]  # nosec B101

@@ -38,6 +38,7 @@ def save_scaler_params(scaler_params: dict[str, float], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(scaler_params, f, indent=2)
+        f.write("\n")
 
 
 def load_scaler_params(path: Path) -> dict[str, float]:

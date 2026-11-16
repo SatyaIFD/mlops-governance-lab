@@ -212,6 +212,7 @@ def run_fairness_audit(enforce_gate: bool = False) -> dict:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(audit_summary, f, indent=2)
+        f.write("\n")
 
     print("\n" + "=" * 65)
     print("⚖️ P1 FRAUD PERFORMANCE GATE & INFORMATIONAL SEGMENT TELEMETRY")
