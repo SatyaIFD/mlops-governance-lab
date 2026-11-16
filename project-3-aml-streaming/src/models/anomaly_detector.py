@@ -27,8 +27,8 @@ class AMLAnomalyDetector:
         self.mlflow_run_id: str | None = None
         self.training_window_end_row: int = 0
         self.model: RandomForestClassifier = RandomForestClassifier(
-            n_estimators=50,
-            max_depth=10,
+            n_estimators=150,
+            max_depth=12,
             class_weight="balanced",
             random_state=42,
             n_jobs=1,
@@ -78,6 +78,10 @@ class AMLAnomalyDetector:
         X = self._align_features(df)
         target_col = "Is_laundering" if "Is_laundering" in df.columns else "Target"
         y = df[target_col].astype(int)
+        if y.nunique() < 2:
+            raise ValueError(
+                "Training data must contain at least 2 classes in 'Is_laundering'."
+            )
         self.model.fit(X, y)
         if training_window_end_row is None or int(training_window_end_row) < len(df):
             raise ValueError(

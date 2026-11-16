@@ -51,3 +51,8 @@ project-2-loan-default/airflow/
 logs/*
 !logs/.gitkeep
 *.log
+
+# Environment Secrets
+.env
+.env.*
+!.env.example

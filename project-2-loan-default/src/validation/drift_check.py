@@ -194,6 +194,7 @@ class DataDriftMonitor:
         report_path = self.artifacts_dir / "data_drift_report.json"
         with open(report_path, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=4)
+            f.write("\n")
         return bool(report["drift_detected_alert"])
 
 
@@ -238,6 +239,7 @@ def record_telemetry_drift_status(artifacts_dir: Path, telemetry_status: dict) -
     existing["live_telemetry_drift"] = telemetry_status
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=4)
+        f.write("\n")
 
 
 if __name__ == "__main__":

@@ -19,10 +19,10 @@ Financial crime monitoring models carry inherent risk of indirect bias or demogr
 | --- | --- | --- |
 | **Geographic / Country Corridors** | High-risk cross-border corridors can be over-flagged if location columns are fed to the classifier. | `AMLAnomalyDetector._align_features()` filters strictly to `CANONICAL_AML_FEATURES`, dropping country/currency fields prior to training and inference. |
 | **Transaction Frequency Differences** | High-volume accounts could be over-flagged by raw transaction counts. | `velocity_acceleration` normalizes each account's 1-hour outgoing count against its own 24-hour average hourly baseline (`out_count_24h / 24.0`). |
-| **Class Imbalance Distortion** | Laundering events represent ~0.1% of stream volume (~12 positives in the 10,000-row validation slice). | `RandomForestClassifier` uses `class_weight="balanced"` and `select_empirical_threshold()` (`src/models/train.py`) selects a heuristic F1 cutoff (`0.62` persisted in `.meta.json`). |
+| **Class Imbalance Distortion** | Laundering events represent ~0.1% of stream volume (~12 positives in the 10,000-row validation slice). | `RandomForestClassifier` uses `class_weight="balanced"` and `select_empirical_threshold()` (`src/models/train.py`) selects a heuristic F1 cutoff (`0.37` persisted in `.meta.json`). |
 
 ---
 
 ## 3. Human-In-The-Loop (HITL) Operational Protections
 
-* **Non-Autonomous Blocking:** Transactions scoring at or above the persisted threshold (`prob >= 0.62`) are written to `artifacts/aml_alerts.jsonl` (`is_anomaly = 1`) for human investigator review rather than triggering automated account freezes.
+* **Non-Autonomous Blocking:** Transactions scoring at or above the persisted threshold (`prob >= 0.37`) are written to `artifacts/aml_alerts.jsonl` (`is_anomaly = 1`) for human investigator review rather than triggering automated account freezes.

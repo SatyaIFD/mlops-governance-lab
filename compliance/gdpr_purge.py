@@ -86,13 +86,45 @@ def _compute_target_tokens(
     return tokens
 
 
-def _wait_for_inflight_compressors(data_file: Path, timeout_s: float = 5.0) -> None:
-    """Waits for any background *.gz.tmp compression files in data_file.parent to finish before staging."""
+def _find_companion_gz_tmp(data_file: Path, stale_after_s: float = 60.0) -> list[Path]:
+    """Finds active companion .gz.tmp files for data_file, unlinking orphaned files older than stale_after_s."""
     if not data_file.parent.is_dir():
-        return
+        return []
+    patterns = [f"{data_file.name}.*.gz.tmp"]
+    if data_file.name == "telemetry_logs.jsonl":
+        patterns.append("telemetry_*.jsonl.*.gz.tmp")
+    now = time.time()
+    active: list[Path] = []
+    seen: set[Path] = set()
+    for pat in patterns:
+        for cand in sorted(data_file.parent.glob(pat)):
+            try:
+                st = cand.stat()
+            except OSError:
+                continue
+            if now - st.st_mtime >= stale_after_s:
+                logging.warning(
+                    "Removing stale orphaned compressor file: %s", cand.name
+                )
+                try:
+                    cand.unlink()
+                except OSError:
+                    pass
+                continue
+            rp = cand.resolve()
+            if rp not in seen:
+                active.append(cand)
+                seen.add(rp)
+    return active
+
+
+def _wait_for_inflight_compressors(
+    data_file: Path, timeout_s: float = 5.0, stale_after_s: float = 60.0
+) -> None:
+    """Waits for active companion .gz.tmp files to finish, cleaning up stale crash orphans."""
     deadline = time.monotonic() + timeout_s
     while True:
-        inflight = list(data_file.parent.glob("*.gz.tmp"))
+        inflight = _find_companion_gz_tmp(data_file, stale_after_s=stale_after_s)
         if not inflight:
             return
         if time.monotonic() >= deadline:
@@ -461,7 +493,7 @@ def execute_right_to_be_forgotten(
                         _on_staged_hook()
                     with _writer_swap_lock(companion_files):
                         if is_jsonl and (
-                            list(data_file.parent.glob("*.gz.tmp"))
+                            _find_companion_gz_tmp(data_file)
                             or _rotation_detected(
                                 data_file, companion_files, staged_meta
                             )

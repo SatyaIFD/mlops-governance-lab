@@ -126,27 +126,29 @@ def _compress_file_async(
 ) -> None:
     def _worker():
         try:
-            if not raw_path.is_file():
-                return
-            orig_st = raw_path.stat()
-            tmp_gz = gz_path.with_suffix(".gz.tmp")
-            with open(raw_path, "rb") as f_in, gzip.open(tmp_gz, "wb") as f_out:
-                shutil.copyfileobj(f_in, f_out)
             active_lock = lock_path or raw_path.with_suffix(".lock")
-            with open(active_lock, "w", encoding="utf-8") as lf:
-                fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
-                try:
-                    if (
-                        raw_path.is_file()
-                        and raw_path.stat().st_ino == orig_st.st_ino
-                        and raw_path.stat().st_mtime_ns == orig_st.st_mtime_ns
-                    ):
-                        os.replace(tmp_gz, gz_path)
-                        raw_path.unlink()
-                    elif tmp_gz.exists():
-                        tmp_gz.unlink()
-                finally:
-                    fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
+            tmp_gz = gz_path.with_suffix(".gz.tmp")
+            for _ in range(2):
+                if not raw_path.is_file():
+                    return
+                orig_st = raw_path.stat()
+                with open(raw_path, "rb") as f_in, gzip.open(tmp_gz, "wb") as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+                with open(active_lock, "w", encoding="utf-8") as lf:
+                    fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+                    try:
+                        if (
+                            raw_path.is_file()
+                            and raw_path.stat().st_ino == orig_st.st_ino
+                            and raw_path.stat().st_mtime_ns == orig_st.st_mtime_ns
+                        ):
+                            os.replace(tmp_gz, gz_path)
+                            raw_path.unlink()
+                            return
+                        if tmp_gz.exists():
+                            tmp_gz.unlink()
+                    finally:
+                        fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
         except OSError:
             return
 

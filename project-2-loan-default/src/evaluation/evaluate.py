@@ -320,6 +320,7 @@ class LoanModelEvaluator:
         report_path = self.artifacts_dir / "compliance_audit_report.json"
         with open(report_path, "w", encoding="utf-8") as f:
             json.dump(audit_report, f, indent=4)
+            f.write("\n")
 
         print(
             f"📊 Out-of-Sample Audit Completed: Sign-off -> {audit_report['compliance']['governance_signoff_status']} "

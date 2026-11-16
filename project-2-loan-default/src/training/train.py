@@ -164,6 +164,7 @@ class LoanModelTrainer:
         feature_cols_path = artifacts_dir / "feature_columns.json"
         with open(feature_cols_path, "w", encoding="utf-8") as f:
             json.dump(list(X_fit.columns), f, indent=2)
+            f.write("\n")
 
         mlflow.set_experiment("loan_default_risk_governance")
         with mlflow.start_run(run_name="mitigated_sample_reweighting") as run:
@@ -192,6 +193,7 @@ class LoanModelTrainer:
             thresholds_path = tmp_thresh_dir / "decision_thresholds.json"
             with open(thresholds_path, "w", encoding="utf-8") as f:
                 json.dump(thresholds_payload, f, indent=2)
+                f.write("\n")
 
             preds = (test_probs >= unified_cutoff).astype(int)
             train_auc = float(roc_auc_score(y_fit, fit_probs))
@@ -247,6 +249,7 @@ class LoanModelTrainer:
             final_thresh_path = artifacts_dir / "decision_thresholds.json"
             with open(final_thresh_path, "w", encoding="utf-8") as f:
                 json.dump(thresholds_payload, f, indent=2)
+                f.write("\n")
             print("💾 Production run completely tracked in system registry.")
 
 

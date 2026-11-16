@@ -18,7 +18,7 @@ This document specifies the operational SLAs, Service Level Objectives (SLOs), a
 
 ## 📈 Telemetry & Health Monitoring
 
-The pipeline outputs structured JSON metadata (`artifacts/pipeline_execution_report.json`) with lifecycle `status` values (`"IN_PROGRESS"`, `"COMPLETE"`, `"FAILED_MODEL_LOAD"`, `"FAILED_ZERO_SCORED"`, `"INTERRUPTED"`, or `"FAILED"`) and heartbeat states (`"WARMING_UP"`, `"HEALTHY"`, `"FAILED_MODEL_LOAD"`, `"FAILED_ZERO_SCORED"`, `"INTERRUPTED"`, `"FAILED"`). At ~0.12% base laundering prevalence, `0.48%` alert precision corresponds to ~209 alerts per true positive across `6,693` flagged events:
+The pipeline outputs structured JSON metadata (`artifacts/pipeline_execution_report.json`) with lifecycle `status` values (`"IN_PROGRESS"`, `"COMPLETE"`, `"FAILED_MODEL_LOAD"`, `"FAILED_ZERO_SCORED"`, `"INTERRUPTED"`, or `"FAILED"`) and heartbeat states (`"WARMING_UP"`, `"HEALTHY"`, `"FAILED_MODEL_LOAD"`, `"FAILED_ZERO_SCORED"`, `"INTERRUPTED"`, `"FAILED"`). At ~0.12% base laundering prevalence, `0.48%` alert precision corresponds to ~230 alerts per true positive across `10,560` flagged events:
 
 ```json
 {
@@ -32,9 +32,9 @@ The pipeline outputs structured JSON metadata (`artifacts/pipeline_execution_rep
   },
   "model_metadata": {
     "artifact_path": "aml_streaming_model",
-    "calibrated_threshold": 0.62,
-    "model_sha256": "e6aa6b7a819e5d706a662850e4fe3e6270a9c4947e8aede76666d2e9ce96a613",
-    "mlflow_run_id": "a2a05552471d4940992cd1144b18de79",
+    "calibrated_threshold": 0.37,
+    "model_sha256": "1d676946d533764bbed7f86f2e64e4dd7a01c6c887d11a8a61a9148b3bb9a56f",
+    "mlflow_run_id": "7295adfcbe1944d08c5237207ef6c086",
     "features_used": [
       "Amount",
       "pass_through_ratio_1h",
@@ -48,11 +48,11 @@ The pipeline outputs structured JSON metadata (`artifacts/pipeline_execution_rep
   },
   "streaming_performance": {
     "total_processed": 100000,
-    "anomalies_flagged": 6693,
+    "anomalies_flagged": 10560,
     "actual_laundering_events": 122,
-    "laundering_intercepted": 32,
-    "recall_percentage": 26.23,
-    "precision_percentage": 0.48
+    "laundering_intercepted": 46,
+    "recall_percentage": 37.7,
+    "precision_percentage": 0.44
   }
 }
 ```

@@ -678,3 +678,36 @@ def test_training_window_ends_before_scoring_starts(tmp_path, monkeypatch):
         )
     assert exc_zero.value.code == 1  # nosec B101
     assert exc.value.code == 1  # nosec B101
+
+
+def test_prepare_training_data_and_label_validation(tmp_path, monkeypatch):
+    """Tests prepare_training_data end-to-end, select_empirical_threshold, and missing/single-class label rejection."""
+    import numpy as np
+    from src.models.train import prepare_training_data, select_empirical_threshold
+    from src.streaming.generator import _write_synthetic_saml_fallback
+
+    monkeypatch.setenv("AML_HMAC_SECRET_KEY", "test-dedicated-aml-hmac-secret")
+    csv_path = tmp_path / "SAML-D.csv"
+    _write_synthetic_saml_fallback(csv_path, num_rows=60)
+    df = prepare_training_data(csv_path, warmup_rows=10, train_rows=40)
+    assert len(df) == 40  # nosec B101
+    assert set(CANONICAL_AML_FEATURES + ["Is_laundering"]).issubset(df.columns)  # nosec B101
+
+    y_val = pd.Series([0, 1, 0, 1, 0, 1])
+    probs = np.array([0.1, 0.8, 0.2, 0.75, 0.3, 0.9])
+    cutoff = select_empirical_threshold(y_val, probs)
+    assert 0.25 <= cutoff <= 0.85  # nosec B101
+
+    df_single = df.copy()
+    df_single["Is_laundering"] = 0
+    det = AMLAnomalyDetector()
+    assert det.model.get_params()["n_estimators"] == 150  # nosec B101
+    assert det.model.get_params()["max_depth"] == 12  # nosec B101
+    with pytest.raises(ValueError, match="at least 2 classes"):
+        det.train(df_single, training_window_end_row=50)
+
+    bad_csv = tmp_path / "bad.csv"
+    raw_df = pd.read_csv(csv_path).drop(columns=["Is_laundering"])
+    raw_df.to_csv(bad_csv, index=False)
+    with pytest.raises(ValueError, match="Missing required 'Is_laundering'"):
+        prepare_training_data(bad_csv, warmup_rows=5, train_rows=10)

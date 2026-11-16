@@ -124,6 +124,7 @@ def _write_report(
     tmp_report = report_path.with_name(f"{report_path.name}.{os.getpid()}.tmp")
     with open(tmp_report, "w", encoding="utf-8") as f:
         json.dump(execution_summary, f, indent=2)
+        f.write("\n")
     os.replace(tmp_report, report_path)
     return execution_summary
 

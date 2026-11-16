@@ -83,6 +83,7 @@ def run_statistical_validation() -> dict:
     DRIFT_REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(DRIFT_REPORT_PATH, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
+        f.write("\n")
 
     print("✅ Success! Statistical data validation and PSI checks completed.")
     return report
