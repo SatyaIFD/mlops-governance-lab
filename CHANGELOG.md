@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.23](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.22...v0.5.23) (2026-11-16)
+
+
+### Bug Fixes
+
+* **governance:** align p3 rf params and docs, clean stale gz.tmp orphans, and validate p3 labels ([#185](https://github.com/SatyaIFD/mlops-governance-reference/issues/185)) ([99a812b](https://github.com/SatyaIFD/mlops-governance-reference/commit/99a812bd9601ef765d9db1931ebe0f2db4e3116b))
+
 ## [0.5.22](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.21...v0.5.22) (2026-11-15)
 
 
