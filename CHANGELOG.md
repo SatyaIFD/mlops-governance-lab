@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.24](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.23...v0.5.24) (2026-11-16)
+
+
+### Bug Fixes
+
+* **governance:** untrack .env, align p3 rf params, clean stale gz.tmp, and normalize json newlines ([#187](https://github.com/SatyaIFD/mlops-governance-reference/issues/187)) ([82bbaf8](https://github.com/SatyaIFD/mlops-governance-reference/commit/82bbaf85ceb8d60a6543eba96212edfffe5775b9))
+
 ## [0.5.23](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.22...v0.5.23) (2026-11-16)
 
 
