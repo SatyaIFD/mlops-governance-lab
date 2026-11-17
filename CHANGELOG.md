@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.26](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.25...v0.5.26) (2026-11-17)
+
+
+### Bug Fixes
+
+* **governance:** isolate mlflow_db mount, upgrade airflow 3.4 dag, and use unscreened seed 42 ([#196](https://github.com/SatyaIFD/mlops-governance-reference/issues/196)) ([b061777](https://github.com/SatyaIFD/mlops-governance-reference/commit/b061777aaf8ea07ddeaf4b331aa6bd4ef28356c1))
+
 ## [0.5.25](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.24...v0.5.25) (2026-11-17)
 
 
