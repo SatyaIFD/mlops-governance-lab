@@ -13,7 +13,7 @@ source = { registry = "https://pypi.org/simple" }
 
 [[package]]
 name = "fastapi"
-version = "0.162.0"
+version = "0.162.6"
 source = { registry = "https://pypi.org/simple" }
 
 [[package]]
@@ -38,12 +38,12 @@ source = { registry = "https://pypi.org/simple" }
 
 [[package]]
 name = "kaggle"
-version = "2.2.4"
+version = "2.2.5"
 source = { registry = "https://pypi.org/simple" }
 
 [[package]]
 name = "kagglehub"
-version = "1.0.2"
+version = "1.0.3"
 source = { registry = "https://pypi.org/simple" }
 
 [[package]]
@@ -63,7 +63,7 @@ source = { registry = "https://pypi.org/simple" }
 
 [[package]]
 name = "numpy"
-version = "2.4.6"
+version = "2.5.4"
 source = { registry = "https://pypi.org/simple" }
 
 [[package]]
@@ -83,7 +83,7 @@ source = { registry = "https://pypi.org/simple" }
 
 [[package]]
 name = "pyarrow"
-version = "25.0.1"
+version = "26.0.1"
 source = { registry = "https://pypi.org/simple" }
 
 [[package]]
@@ -93,7 +93,7 @@ source = { registry = "https://pypi.org/simple" }
 
 [[package]]
 name = "pytest"
-version = "9.1.1"
+version = "9.2.0"
 source = { registry = "https://pypi.org/simple" }
 
 [[package]]
@@ -113,7 +113,7 @@ source = { registry = "https://pypi.org/simple" }
 
 [[package]]
 name = "shap"
-version = "0.52.0"
+version = "0.54.1"
 source = { registry = "https://pypi.org/simple" }
 
 [[package]]

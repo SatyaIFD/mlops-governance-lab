@@ -217,7 +217,11 @@ def group_telemetry_by_source(
     return {src: pd.DataFrame(rows) for src, rows in grouped.items() if rows}
 
 
-def record_telemetry_drift_status(artifacts_dir: Path, telemetry_status: dict) -> None:
+def record_telemetry_drift_status(
+    artifacts_dir: Path,
+    telemetry_status: dict,
+    synthetic_status: dict | None = None,
+) -> None:
     report_path = artifacts_dir / "data_drift_report.json"
     existing = {}
     if report_path.exists():
@@ -237,6 +241,8 @@ def record_telemetry_drift_status(artifacts_dir: Path, telemetry_status: dict) -
             "metrics": {},
         }
     existing["live_telemetry_drift"] = telemetry_status
+    if synthetic_status is not None:
+        existing["synthetic_telemetry_drift"] = synthetic_status
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=4)
         f.write("\n")
@@ -286,10 +292,28 @@ if __name__ == "__main__":
                 for k, v in grouped_dfs.items()
                 if len(v) >= args.min_telemetry_rows
             }
+            synth_eligible = {
+                k: v
+                for k, v in all_grouped_dfs.items()
+                if k != DEFAULT_TRAFFIC_SOURCE and len(v) >= args.min_telemetry_rows
+            }
+            synth_status = None
+            if synth_eligible:
+                s_src = max(synth_eligible, key=lambda k: len(synth_eligible[k]))
+                s_rep = monitor.compute_drift_summary(
+                    synth_eligible[s_src], source_label=f"telemetry:{s_src}"
+                )
+                synth_status = {
+                    "status": s_rep["overall_status"],
+                    "data_source": s_src,
+                    "observation_count": s_rep["observation_count"],
+                    "drift_detected_alert": s_rep["drift_detected_alert"],
+                    "metrics": s_rep["metrics"],
+                }
             if not eligible:
-                max_obs = max(counts_by_source.values(), default=0)
+                live_obs = counts_by_source.get(target_src, 0)
                 print(
-                    f"⏭️ SKIPPED_INSUFFICIENT_TELEMETRY: max single-source observations={max_obs} "
+                    f"⏭️ SKIPPED_INSUFFICIENT_TELEMETRY: {target_src} observations={live_obs} "
                     f"(required>={args.min_telemetry_rows}; counts={counts_by_source})."
                 )
                 record_telemetry_drift_status(
@@ -297,10 +321,17 @@ if __name__ == "__main__":
                     {
                         "status": "SKIPPED_INSUFFICIENT_TELEMETRY",
                         "min_rows_required": args.min_telemetry_rows,
-                        "observation_count": max_obs,
+                        "observation_count": live_obs,
                         "counts_by_source": counts_by_source,
                     },
+                    synthetic_status=synth_status,
                 )
+                if (
+                    args.fail_on_drift
+                    and synth_status
+                    and synth_status.get("drift_detected_alert")
+                ):
+                    sys.exit(1)
                 sys.exit(0)
             by_source_reports = {}
             any_drift = False

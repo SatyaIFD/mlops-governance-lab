@@ -87,7 +87,7 @@ jobs:
       - name: Run Trivy Vulnerability Scanner (Airflow Standalone)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: 'apache/airflow:2.10.2'
+          image-ref: 'apache/airflow:3.4.0'
           format: 'table'
           exit-code: '0'
           ignore-unfixed: true

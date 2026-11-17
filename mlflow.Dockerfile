@@ -5,7 +5,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir mlflow==3.18.0 msgpack==1.2.4 setuptools==84.2.1 urllib3==2.8.0 && \
     rm -rf /usr/local/lib/python3.13/site-packages/pip* /usr/local/lib/python3.13/ensurepip
-RUN useradd -m -u 10001 mlopsuser && mkdir -p /app/mlruns /workspace /data && chown -R 10001:1000 /app /workspace /data && chmod -R 2775 /app /workspace /data
+RUN useradd -m -u 10001 mlopsuser && mkdir -p /app/mlruns /mlflow_db /data && chown -R 10001:1000 /app /mlflow_db /data && chmod -R 2775 /app /mlflow_db /data
 USER 10001
 EXPOSE 5000
-CMD ["mlflow", "server", "--backend-store-uri", "sqlite:////workspace/mlflow.db", "--default-artifact-root", "/app/mlruns", "--host", "0.0.0.0", "--port", "5000"]
+CMD ["mlflow", "server", "--backend-store-uri", "sqlite:////mlflow_db/mlflow.db", "--default-artifact-root", "/app/mlruns", "--host", "0.0.0.0", "--port", "5000"]

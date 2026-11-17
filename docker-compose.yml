@@ -30,10 +30,10 @@ services:
     group_add:
       - "1000"
     environment:
-      - MLFLOW_TRACKING_URI=sqlite:////workspace/mlflow.db
+      - MLFLOW_TRACKING_URI=sqlite:////mlflow_db/mlflow.db
       - EXPECTED_API_KEY=${EXPECTED_API_KEY:?EXPECTED_API_KEY must be set in .env or environment}
     volumes:
-      - .:/workspace:ro
+      - ./mlflow_db:/mlflow_db:ro
       - ./mlruns:/app/mlruns:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/health || exit 1"]
@@ -53,12 +53,12 @@ services:
     group_add:
       - "1000"
     environment:
-      - MLFLOW_TRACKING_URI=sqlite:////workspace/mlflow.db
+      - MLFLOW_TRACKING_URI=sqlite:////mlflow_db/mlflow.db
       - EXPECTED_API_KEY=${EXPECTED_API_KEY:?EXPECTED_API_KEY must be set in .env or environment}
       - LOAN_TELEMETRY_LOG_PATH=/app/artifacts/telemetry_logs.jsonl
       - LOAN_HMAC_SECRET_KEY=${LOAN_HMAC_SECRET_KEY:?LOAN_HMAC_SECRET_KEY must be set in .env or environment}
     volumes:
-      - .:/workspace:ro
+      - ./mlflow_db:/mlflow_db:ro
       - ./mlruns:/app/mlruns:ro
       - ./project-2-loan-default/artifacts:/app/artifacts
     healthcheck:
@@ -79,7 +79,7 @@ services:
     group_add:
       - "1000"
     environment:
-      - MLFLOW_TRACKING_URI=sqlite:////workspace/mlflow.db
+      - MLFLOW_TRACKING_URI=sqlite:////mlflow_db/mlflow.db
       - AML_HMAC_KEY_VERSION=${AML_HMAC_KEY_VERSION:-v2}
       - AML_HMAC_SECRET_KEY=${AML_HMAC_SECRET_KEY:?AML_HMAC_SECRET_KEY must be set in .env or environment}
       - AML_PSEUDONYMIZE_ACCOUNTS=${AML_PSEUDONYMIZE_ACCOUNTS:-1}
@@ -88,7 +88,7 @@ services:
       - AML_MAX_EVENTS=100000
       - AML_STREAM_DELAY_SECONDS=0.0
     volumes:
-      - .:/workspace:ro
+      - ./mlflow_db:/mlflow_db:ro
       - ./project-3-aml-streaming/data:/app/data:ro
       - ./project-3-aml-streaming/artifacts:/app/artifacts
       - ./mlruns:/app/mlruns:ro
@@ -124,19 +124,19 @@ services:
       - PYTHONUSERBASE=/opt/airflow/.local
       - UMASK=0002
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/db/airflow.db
-      - _PIP_ADDITIONAL_REQUIREMENTS=pyarrow==25.0.1 httpx==0.28.1
+      - _PIP_ADDITIONAL_REQUIREMENTS=pyarrow==26.0.1 httpx==0.28.1
       - EXPECTED_API_KEY=${EXPECTED_API_KEY:?EXPECTED_API_KEY must be set in .env or environment}
       - LOAN_API_URL=http://mlops-api-gateway:8081/api/v1/loan-sim/predict
       - LOAN_HMAC_SECRET_KEY=${LOAN_HMAC_SECRET_KEY:?LOAN_HMAC_SECRET_KEY must be set in .env or environment}
     command: standalone
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8080/api/v2/monitor/health || curl -sf http://127.0.0.1:8080/health || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 90s
     restart: unless-stopped
 
   mlflow-server:
@@ -151,7 +151,7 @@ services:
     ports:
       - "127.0.0.1:5000:5000"
     volumes:
-      - .:/workspace
+      - ./mlflow_db:/mlflow_db
       - ./mlruns:/app/mlruns
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health')\" || exit 1"]
