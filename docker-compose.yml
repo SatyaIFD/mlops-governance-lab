@@ -105,7 +105,7 @@ services:
     restart: "no"
 
   airflow-standalone:
-    image: apache/airflow:2.10.2
+    image: apache/airflow:3.4.0
     container_name: mlops-airflow
     user: "${DOCKER_UID:-1000}:0"
     group_add:
