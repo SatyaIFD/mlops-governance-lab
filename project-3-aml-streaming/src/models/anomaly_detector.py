@@ -27,8 +27,8 @@ class AMLAnomalyDetector:
         self.mlflow_run_id: str | None = None
         self.training_window_end_row: int = 0
         self.model: RandomForestClassifier = RandomForestClassifier(
-            n_estimators=150,
-            max_depth=12,
+            n_estimators=50,
+            max_depth=10,
             class_weight="balanced",
             random_state=42,
             n_jobs=1,

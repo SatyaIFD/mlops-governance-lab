@@ -147,9 +147,12 @@ def _discover_jsonl_targets(data_file: Path) -> list[Path]:
 
     _add(data_file)
     if data_file.suffix == ".jsonl":
-        for idx in range(1, 10):
+        for idx in range(1, 25):
             _add(data_file.with_suffix(f"{data_file.suffix}.{idx}.gz"))
             _add(data_file.with_suffix(f"{data_file.suffix}.{idx}"))
+        if data_file.parent.is_dir():
+            for rot_f in sorted(data_file.parent.glob(f"{data_file.name}.*")):
+                _add(rot_f)
         if data_file.name == "telemetry_logs.jsonl" and data_file.parent.is_dir():
             for pod_f in sorted(data_file.parent.glob("telemetry_*.jsonl*")):
                 _add(pod_f)

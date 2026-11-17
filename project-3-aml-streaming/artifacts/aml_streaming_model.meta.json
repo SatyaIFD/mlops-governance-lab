@@ -1,5 +1,5 @@
 {
-  "threshold": 0.37,
+  "threshold": 0.62,
   "feature_cols": [
     "Amount",
     "pass_through_ratio_1h",
@@ -9,8 +9,8 @@
     "receiver_inflow_count_1h",
     "receiver_inflow_amount_1h"
   ],
-  "sha256": "1d676946d533764bbed7f86f2e64e4dd7a01c6c887d11a8a61a9148b3bb9a56f",
-  "mlflow_run_id": "7295adfcbe1944d08c5237207ef6c086",
+  "sha256": "6ce0941fa4727f034727c343367333534987728819f786323051177ed7f2f943",
+  "mlflow_run_id": "22ee48f7819942cc8900c6275bfe1ff4",
   "training_window_end_row": 100000,
   "sklearn_version": "1.9.1",
   "skops_version": "0.16.0"

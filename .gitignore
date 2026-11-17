@@ -41,6 +41,7 @@ project-3-aml-streaming/docs/api/
 airflow/airflow.cfg
 airflow/webserver_config.py
 airflow/airflow.db*
+airflow/db/
 airflow/airflow-webserver.pid
 airflow/logs/
 project-2-loan-default/airflow/
