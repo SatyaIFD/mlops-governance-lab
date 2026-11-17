@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.25](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.24...v0.5.25) (2026-11-17)
+
+
+### Bug Fixes
+
+* **governance:** revert p3 rf to 50/10, use directory db mounts, and evaluate 600 live/synthetic rows ([#194](https://github.com/SatyaIFD/mlops-governance-reference/issues/194)) ([2a1cc4d](https://github.com/SatyaIFD/mlops-governance-reference/commit/2a1cc4d513613af3446aac239369cc6de16e1644))
+
 ## [0.5.24](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.23...v0.5.24) (2026-11-16)
 
 
