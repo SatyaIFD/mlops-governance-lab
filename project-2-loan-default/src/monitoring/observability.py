@@ -22,7 +22,7 @@ TELEMETRY_SCHEMA_VERSION = 2
 MAX_TELEMETRY_LOG_BYTES = int(
     os.getenv("LOAN_TELEMETRY_MAX_BYTES", str(50 * 1024 * 1024))
 )
-MAX_TELEMETRY_ARCHIVES = int(os.getenv("LOAN_TELEMETRY_MAX_ARCHIVES", "5"))
+MAX_TELEMETRY_ARCHIVES = int(os.getenv("LOAN_TELEMETRY_MAX_ARCHIVES", "10"))
 
 
 def compute_payload_hash(payload: dict[str, Any]) -> str:
