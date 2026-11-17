@@ -19,6 +19,7 @@ env/
 .backups/
 *.db
 mlflow.db
+mlflow_db/
 mlruns/
 aml_streaming_model
 aml_streaming_model.meta.json

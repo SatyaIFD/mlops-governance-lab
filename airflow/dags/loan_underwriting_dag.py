@@ -2,9 +2,12 @@ import shlex
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from airflow.operators.bash import BashOperator
-
 from airflow import DAG
+
+try:
+    from airflow.providers.standard.operators.bash import BashOperator
+except ImportError:
+    from airflow.operators.bash import BashOperator
 
 DAG_DIR = Path(__file__).resolve().parent
 CONTAINER_SCOPED_ROOT = Path("/opt/airflow")
@@ -29,7 +32,7 @@ with DAG(
     "loan_default_underwriting_governance",
     default_args=default_args,
     description="Automated traffic streaming, data drift analysis, and fairness auditing",
-    schedule_interval="@daily",
+    schedule="@daily",
     catchup=False,
     max_active_runs=1,
 ) as dag:
