@@ -30,3 +30,4 @@ final_decision: null
 
 * **Minimized Telemetry Snapshots:** `ModelObservabilityLogger` (`src/monitoring/observability.py`) appends a versioned (`schema_version: 2`) 5-field numerical snapshot (`Age`, `Income`, `CreditScore`, `LoanAmount`, `DTIRatio`), latency, HTTP status, and governance routing state to `artifacts/telemetry_logs.jsonl`.
 * **Journaled Right to be Forgotten:** Batch dataset and MLflow SQLite (`params`/`tags`) erasure for `user_id`-keyed datasets is enforced via the crash-recoverable state journal in `compliance/gdpr_purge.py`.
+* **Bounded Archive Retention:** Telemetry logs rotate at `50 MB` (`LOAN_TELEMETRY_MAX_BYTES`) up to `10` gzip-compressed archives (`LOAN_TELEMETRY_MAX_ARCHIVES=10`, `500 MB` ceiling), and `compliance/gdpr_purge.py` dynamically sweeps all active and rotated `.jsonl` / `.jsonl.*.gz` archives.

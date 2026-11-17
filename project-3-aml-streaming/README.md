@@ -47,8 +47,8 @@ A stateful streaming inference engine built to detect money-laundering typologie
 | --- | --- |
 | **Total Stream Ingestion** | 200,000 records (100,000 warmup + 100,000 out-of-sample scored) |
 | **Data Quality Compliance** | 100.0% clean events (0 DLQ drops) |
-| **Out-of-Sample Streaming Recall** | **37.70%** (46 / 122 laundering events intercepted) |
-| **Out-of-Sample Alert Precision** | **0.44%** (10,560 alerts written to `artifacts/aml_alerts.jsonl` at threshold `0.37`) |
+| **Out-of-Sample Streaming Recall** | **26.23%** (32 / 122 laundering events intercepted) |
+| **Out-of-Sample Alert Precision** | **0.48%** (6,693 alerts written to `artifacts/aml_alerts.jsonl` at threshold `0.62`) |
 | **Stateful Feature Matrix** | 7 graph & velocity features |
 | **State Memory Bounds** | Swept every 25,000 events under 24h event-time watermark eviction |
 

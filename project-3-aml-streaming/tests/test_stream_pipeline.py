@@ -718,8 +718,8 @@ def test_prepare_training_data_and_label_validation(tmp_path, monkeypatch):
     df_single = df.copy()
     df_single["Is_laundering"] = 0
     det = AMLAnomalyDetector()
-    assert det.model.get_params()["n_estimators"] == 150  # nosec B101
-    assert det.model.get_params()["max_depth"] == 12  # nosec B101
+    assert det.model.get_params()["n_estimators"] == 50  # nosec B101
+    assert det.model.get_params()["max_depth"] == 10  # nosec B101
     with pytest.raises(ValueError, match="at least 2 classes"):
         det.train(df_single, training_window_end_row=30)
 
