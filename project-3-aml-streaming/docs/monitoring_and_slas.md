@@ -33,8 +33,8 @@ The pipeline outputs structured JSON metadata (`artifacts/pipeline_execution_rep
   "model_metadata": {
     "artifact_path": "aml_streaming_model",
     "calibrated_threshold": 0.62,
-    "model_sha256": "6ce0941fa4727f034727c343367333534987728819f786323051177ed7f2f943",
-    "mlflow_run_id": "22ee48f7819942cc8900c6275bfe1ff4",
+    "model_sha256": "62dd4053bcede7cf90ddd519752156ccb8795b7991b884c92b775ce31da97c94",
+    "mlflow_run_id": "415ff1e5726c4d79b7d02e495fc364d0",
     "features_used": [
       "Amount",
       "pass_through_ratio_1h",

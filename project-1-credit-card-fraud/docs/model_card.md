@@ -4,7 +4,7 @@
 * **Developer:** Enterprise Risk MLOps Team
 * **Model Architecture:** XGBoost Classifier (`XGBClassifier`, `scale_pos_weight=1.0` selected on the 20% validation split from `(1.0, 2.0, 4.0)` by maximizing validation PR-AUC subject to validation precision `>= 0.95`)
 * **Engine Dependencies:** `xgboost==3.4.1`, `mlflow==3.18.0`, `python 3.13.14`
-* **Registered Model URI:** `models:/fraud_detection_xgb/12` (SQLite Backend Tracking Registry)
+* **Registered Model URI:** `models:/fraud_detection_xgb/13` (SQLite Backend Tracking Registry)
 * **Served Decision Threshold:** `0.50`
 * **License:** Internal Financial Operations Use Only
 

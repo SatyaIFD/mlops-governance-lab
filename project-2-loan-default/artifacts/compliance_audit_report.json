@@ -1,5 +1,5 @@
 {
-    "mlflow_run_id": "646b1ee33fd642a5abf5b5e5a647891c",
+    "mlflow_run_id": "6db2026f5a604429be21ed4fcc2245ab",
     "performance_metrics": {
         "test_roc_auc": 0.7197,
         "test_accuracy": 0.731,
@@ -102,54 +102,54 @@
     "live_telemetry_fairness": null,
     "synthetic_telemetry_fairness": {
         "data_source": "synthetic_representative_simulation",
-        "model_version": "v12",
+        "model_version": "v13",
         "decision_threshold": 0.1358,
         "demographic_parity_status": "INCONCLUSIVE (CI_STRADDLES_THRESHOLD)",
-        "disparate_impact_ratio": 0.8414,
+        "disparate_impact_ratio": 0.8527,
         "di_95_ci": [
-            0.7561,
-            0.9363
+            0.7654,
+            0.9499
         ],
         "min_cohort_size_required": 30,
         "protected_cohort_count": 300,
         "baseline_cohort_count": 300,
         "protected_approval_rate": 0.6367,
-        "baseline_approval_rate": 0.7567
+        "baseline_approval_rate": 0.7467
     },
     "live_telemetry_fairness_by_source": {
         "synthetic_representative_simulation": {
             "data_source": "synthetic_representative_simulation",
-            "model_version": "v12",
+            "model_version": "v13",
             "decision_threshold": 0.1358,
             "demographic_parity_status": "INCONCLUSIVE (CI_STRADDLES_THRESHOLD)",
-            "disparate_impact_ratio": 0.8414,
+            "disparate_impact_ratio": 0.8527,
             "di_95_ci": [
-                0.7561,
-                0.9363
+                0.7654,
+                0.9499
             ],
             "min_cohort_size_required": 30,
             "protected_cohort_count": 300,
             "baseline_cohort_count": 300,
             "protected_approval_rate": 0.6367,
-            "baseline_approval_rate": 0.7567
+            "baseline_approval_rate": 0.7467
         }
     },
     "live_telemetry_fairness_by_policy": {
-        "synthetic_representative_simulation|model=v12|threshold=0.1358": {
-            "data_source": "synthetic_representative_simulation|model=v12|threshold=0.1358",
-            "model_version": "v12",
+        "synthetic_representative_simulation|model=v13|threshold=0.1358": {
+            "data_source": "synthetic_representative_simulation|model=v13|threshold=0.1358",
+            "model_version": "v13",
             "decision_threshold": 0.1358,
             "demographic_parity_status": "INCONCLUSIVE (CI_STRADDLES_THRESHOLD)",
-            "disparate_impact_ratio": 0.8414,
+            "disparate_impact_ratio": 0.8527,
             "di_95_ci": [
-                0.7561,
-                0.9363
+                0.7654,
+                0.9499
             ],
             "min_cohort_size_required": 30,
             "protected_cohort_count": 300,
             "baseline_cohort_count": 300,
             "protected_approval_rate": 0.6367,
-            "baseline_approval_rate": 0.7567
+            "baseline_approval_rate": 0.7467
         }
     }
 }

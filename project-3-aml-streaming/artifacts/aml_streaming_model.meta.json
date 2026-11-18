@@ -9,8 +9,8 @@
     "receiver_inflow_count_1h",
     "receiver_inflow_amount_1h"
   ],
-  "sha256": "6ce0941fa4727f034727c343367333534987728819f786323051177ed7f2f943",
-  "mlflow_run_id": "22ee48f7819942cc8900c6275bfe1ff4",
+  "sha256": "62dd4053bcede7cf90ddd519752156ccb8795b7991b884c92b775ce31da97c94",
+  "mlflow_run_id": "415ff1e5726c4d79b7d02e495fc364d0",
   "training_window_end_row": 100000,
   "sklearn_version": "1.9.1",
   "skops_version": "0.16.0"

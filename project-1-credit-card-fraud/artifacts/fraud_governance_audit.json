@@ -1,6 +1,6 @@
 {
-  "model_uri": "models:/fraud_detection_xgb/12",
-  "mlflow_run_id": "882a9de69eeb42e487bccdd83d6f6cce",
+  "model_uri": "models:/fraud_detection_xgb/13",
+  "mlflow_run_id": "47c09e1b7dfb4f64bd98a2a6fde6e889",
   "served_decision_threshold": 0.5,
   "audit_type": "operational_segment_performance_and_informational_flag_rate",
   "performance_metrics": {
