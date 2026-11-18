@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.27](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.26...v0.5.27) (2026-11-18)
+
+
+### Bug Fixes
+
+* **governance:** repair .dockerignore patterns and use airflow.sdk.DAG in airflow 3.4 ([#198](https://github.com/SatyaIFD/mlops-governance-reference/issues/198)) ([9a92f22](https://github.com/SatyaIFD/mlops-governance-reference/commit/9a92f22c67217caaf03380c70d45b2969102a0e0))
+
 ## [0.5.26](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.25...v0.5.26) (2026-11-17)
 
 
