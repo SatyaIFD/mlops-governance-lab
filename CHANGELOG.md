@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.28](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.27...v0.5.28) (2026-11-18)
+
+
+### Bug Fixes
+
+* **governance:** align all 9 notebooks with production, sync venv pins, and execute airflow dag ([#200](https://github.com/SatyaIFD/mlops-governance-reference/issues/200)) ([1714c62](https://github.com/SatyaIFD/mlops-governance-reference/commit/1714c62146266926d1a7859a30f700ca4e22cace))
+
 ## [0.5.27](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.26...v0.5.27) (2026-11-18)
 
 
