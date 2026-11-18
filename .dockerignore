@@ -15,9 +15,8 @@ __pycache__
 .ruff_cache
 .coverage
 mlflow.db
+mlflow.db-*
 mlflow_db/
-mlflow.db
-mlflow_db/-*
 mlruns/
 **/data/*.csv
 **/data/*.zip

@@ -2,7 +2,10 @@ import shlex
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from airflow import DAG
+try:
+    from airflow.sdk import DAG
+except ImportError:
+    from airflow import DAG
 
 try:
     from airflow.providers.standard.operators.bash import BashOperator
