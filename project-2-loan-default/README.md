@@ -1,7 +1,7 @@
 
 # 📑 Project 2: Fair Loan Default Risk Underwriting Engine
 
-An MLOps underwriting pipeline implementing sample-reweighted XGBoost training, single-row categorical alignment, authenticated FastAPI serving, EU AI Act human-review routing metadata, and live telemetry drift/fairness monitoring.
+A hands-on MLOps lab pipeline for fair-lending underwriting implementing sample-reweighted XGBoost training, single-row categorical alignment, authenticated FastAPI serving, EU AI Act human-review routing metadata, and isolated live vs. synthetic telemetry monitoring.
 
 ---
 
@@ -13,7 +13,7 @@ project-2-loan-default/
 ├── artifacts/ # Runtime telemetry logs and JSON audit reports
 ├── data/ # Raw CSV and stratified Parquet splits (train.parquet, test.parquet)
 ├── docs/ # Model card, risk assessment, and GDPR control documentation
-├── kubernetes/ # Restricted PSS deployment.yaml and NodePort service.yaml
+├── kubernetes/ # Restricted PSS deployment.yaml and ClusterIP service.yaml
 ├── src/
 │ ├── evaluation/ # Holdout ROC-AUC, accuracy, log-loss & demographic parity evaluator (evaluate.py)
 │ ├── governance/ # Automated Markdown model card compiler (audit.py)
@@ -48,8 +48,9 @@ project-2-loan-default/
 # 1. Start the containerized service and Nginx gateway
 sudo docker compose up -d loan-default-api api-gateway
 
-# 2. Stream representative authenticated traffic through Nginx
-EXPECTED_API_KEY=mlops-dev-secret-key PYTHONPATH=project-2-loan-default \
+# 2. Stream representative synthetic traffic through the Nginx loopback simulation listener (127.0.0.1:8081)
+set -a && source .env && set +a
+PYTHONPATH=project-2-loan-default \
 python project-2-loan-default/src/monitoring/generate_traffic.py --mode representative --count 40
 
 # 3. Run the fairness scanner on collected telemetry

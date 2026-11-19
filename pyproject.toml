@@ -1,5 +1,5 @@
 [project]
-name = "mlops-governance-reference"
+name = "mlops-governance-lab"
 version = "0.5.31"
 description = "Enterprise MLOps Governance & Observability Monorepo"
 authors = [{name = "SatyaIFD"}]

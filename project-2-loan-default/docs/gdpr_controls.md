@@ -6,8 +6,8 @@
 ## 1. Principle of Data Minimization (Article 5)
 The underwriting engine validates and processes a bounded 16-feature credit application schema (`LoanApplicationPayload` in `src/inference/main.py`):
 
-* **Numerical Features (9):** `Age`, `Income`, `CreditScore`, `LoanAmount`, `DTIRatio`, `MonthsEmployed`, `InterestRate`, `NumCreditLines`, `LoanTerm` (plus the derived binary cohort indicator `is_young` for `Age < 30`).
-* **Categorical Features (7):** `Education`, `EmploymentType`, `MaritalStatus`, `HasMortgage`, `HasDependents`, `LoanPurpose`, `HasCoSigner`.
+* **Numerical Features (9):** `Age`, `Income`, `CreditScore`, `LoanAmount`, `DTIRatio`, `MonthsEmployed`, `InterestRate`, `NumCreditLines`, `LoanTerm` (the derived binary cohort indicator `is_young` for `Age < 30` is used only for fairness auditing and sample weighting, and is excluded from model predictors).
+* **Categorical Features (7 validated; 6 modeled):** `Education`, `EmploymentType`, `HasMortgage`, `HasDependents`, `LoanPurpose`, `HasCoSigner`. `MaritalStatus` is validated at the API schema boundary for dataset compatibility and explicitly dropped prior to XGBoost encoding and telemetry logging (`12 CFR 1002.5(d)(1)`).
 * **Prohibited Attributes:** Direct personal identifiers (`LoanID`, names, national IDs, race, gender, religion, or postal codes) are dropped prior to training (`src/training/train.py`) and excluded from inference payloads.
 
 ## 2. Human-in-the-Loop Decision Routing (Article 22 & EU AI Act Art. 14)
@@ -28,6 +28,6 @@ final_decision: null
 
 ## 3. Telemetry Minimization & Right to Erasure (Article 17)
 
-* **Minimized Telemetry Snapshots:** `ModelObservabilityLogger` (`src/monitoring/observability.py`) appends a versioned (`schema_version: 2`) 5-field numerical snapshot (`Age`, `Income`, `CreditScore`, `LoanAmount`, `DTIRatio`), latency, HTTP status, and governance routing state to `artifacts/telemetry_logs.jsonl`.
+* **Minimized Telemetry Snapshots:** `ModelObservabilityLogger` (`src/monitoring/observability.py`) appends a versioned (`schema_version: 2`) 5-field snapshot (`age_bucket` as `"UNDER_30"` or `"30_AND_OVER"` instead of raw `Age`, plus `Income`, `CreditScore`, `LoanAmount`, and `DTIRatio`), a 16-char SHA-256 `payload_hash`, optional HMAC-pseudonymized `user_id`, latency, HTTP status, and governance routing state to `artifacts/telemetry_logs.jsonl` (excluding raw `Age` and `MaritalStatus`).
 * **Journaled Right to be Forgotten:** Batch dataset and MLflow SQLite (`params`/`tags`) erasure for `user_id`-keyed datasets is enforced via the crash-recoverable state journal in `compliance/gdpr_purge.py`.
 * **Bounded Archive Retention:** Telemetry logs rotate at `50 MB` (`LOAN_TELEMETRY_MAX_BYTES`) up to `10` gzip-compressed archives (`LOAN_TELEMETRY_MAX_ARCHIVES=10`, `500 MB` ceiling), and `compliance/gdpr_purge.py` dynamically sweeps all active and rotated `.jsonl` / `.jsonl.*.gz` archives.
