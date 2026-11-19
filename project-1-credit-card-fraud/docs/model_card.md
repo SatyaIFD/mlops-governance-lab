@@ -1,12 +1,12 @@
 # Model Card: Credit Card Fraud Detection Classifier (Version 1.0.0)
 
 ## 1. Model Details
-* **Developer:** Enterprise Risk MLOps Team
+* **Developer:** MLOps Governance Lab
 * **Model Architecture:** XGBoost Classifier (`XGBClassifier`, `scale_pos_weight=1.0` selected on the 20% validation split from `(1.0, 2.0, 4.0)` by maximizing validation PR-AUC subject to validation precision `>= 0.95`)
 * **Engine Dependencies:** `xgboost==3.4.1`, `mlflow==3.18.0`, `python 3.13.14`
 * **Registered Model URI:** `models:/fraud_detection_xgb/13` (SQLite Backend Tracking Registry)
 * **Served Decision Threshold:** `0.50`
-* **License:** Internal Financial Operations Use Only
+* **License:** MIT License (Learning & Engineering Lab)
 
 ## 2. Intended Use
 * **Primary Scope:** Baseline model binary for validating end-to-end MLOps pipeline architecture, leakage-free train/test scaling, containerization, CI/CD automation, and DORA circuit-breaker resilience.

@@ -22,7 +22,7 @@ The pipeline outputs structured JSON metadata (`artifacts/pipeline_execution_rep
 
 ```json
 {
-  "execution_timestamp_utc": "2026-11-09T06:28:12.357976+00:00",
+  "execution_timestamp_utc": "2026-11-19T05:28:30.563667+00:00",
   "status": "COMPLETE",
   "data_governance": {
     "total_ingested": 200000,
@@ -44,11 +44,14 @@ The pipeline outputs structured JSON metadata (`artifacts/pipeline_execution_rep
       "receiver_inflow_count_1h",
       "receiver_inflow_amount_1h"
     ],
+    "training_window_end_row": 100000,
     "warmup_events_count": 100000
   },
   "streaming_performance": {
     "total_processed": 100000,
     "anomalies_flagged": 6693,
+    "replayed_alerts_preserved": 0,
+    "total_alerts_in_file": 6693,
     "actual_laundering_events": 122,
     "laundering_intercepted": 32,
     "recall_percentage": 26.23,

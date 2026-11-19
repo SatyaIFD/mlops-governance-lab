@@ -1,4 +1,4 @@
-name: mlops-governance-reference
+name: mlops-governance-lab
 services:
   api-gateway:
     image: nginx:1.29-alpine
@@ -24,7 +24,7 @@ services:
     build:
       context: .
       dockerfile: project-1-credit-card-fraud/Dockerfile
-    image: ghcr.io/satyaifd/mlops-governance-reference/fraud-detection-job:latest
+    image: ghcr.io/satyaifd/mlops-governance-lab/fraud-detection-job:latest
     container_name: mlops-fraud-api
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     group_add:
@@ -47,7 +47,7 @@ services:
     build:
       context: .
       dockerfile: project-2-loan-default/Dockerfile
-    image: ghcr.io/satyaifd/mlops-governance-reference/loan-default-job:latest
+    image: ghcr.io/satyaifd/mlops-governance-lab/loan-default-job:latest
     container_name: mlops-loan-api
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     group_add:
@@ -73,7 +73,7 @@ services:
     build:
       context: .
       dockerfile: project-3-aml-streaming/Dockerfile
-    image: ghcr.io/satyaifd/mlops-governance-reference/aml-stream-api:latest
+    image: ghcr.io/satyaifd/mlops-governance-lab/aml-stream-api:latest
     container_name: mlops-aml-streaming
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     group_add:
@@ -145,7 +145,7 @@ services:
     build:
       context: .
       dockerfile: mlflow.Dockerfile
-    image: ghcr.io/satyaifd/mlops-governance-reference/mlflow-server:latest
+    image: ghcr.io/satyaifd/mlops-governance-lab/mlflow-server:latest
     container_name: mlops-mlflow-server
     user: "${DOCKER_UID:-1000}:${DOCKER_GID:-1000}"
     group_add:

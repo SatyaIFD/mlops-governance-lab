@@ -1,6 +1,6 @@
 # Project 3: Real-Time Stateful AML Streaming Observability Engine
 
-A stateful streaming inference engine built to detect money-laundering typologies (smurfing, layering, structuring, pass-through mules) in transaction streams with Dead-Letter Queue (DLQ) isolation and schema validation.
+A hands-on stateful streaming lab pipeline for experimenting with money-laundering typology features (smurfing, layering, structuring, pass-through mules), Dead-Letter Queue (DLQ) isolation, HMAC pseudonymization, and schema validation.
 
 ---
 

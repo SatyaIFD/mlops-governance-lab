@@ -5,7 +5,7 @@
 * **Version:** 1.2.0
 * **Model Type:** Supervised Ensemble Classifier (`sklearn.ensemble.RandomForestClassifier`)
 * **Target Variable:** `Is_laundering` (Binary: `0` = Normal Transaction, `1` = Money Laundering)
-* **Maintainers:** MLOps Governance & Financial Crime Engineering Team
+* **Maintainers:** MLOps Governance Lab
 
 ---
 
