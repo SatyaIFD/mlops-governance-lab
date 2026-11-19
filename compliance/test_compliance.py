@@ -584,7 +584,19 @@ def test_notebooks_ast_zero_outputs_and_src_symbols():
         for p in repo_root.rglob("*.ipynb")
         if ".ipynb_checkpoints" not in p.parts and ".git" not in p.parts
     )
-    assert len(notebooks) == 9  # nosec B101
+    required_notebooks = {
+        "project-1-credit-card-fraud/notebooks/01_exploratory_data_analysis.ipynb",
+        "project-1-credit-card-fraud/notebooks/02_model_training_and_tuning.ipynb",
+        "project-1-credit-card-fraud/notebooks/03_governance_and_fairness_audit.ipynb",
+        "project-1-credit-card-fraud/notebooks/04_explainability_and_drift.ipynb",
+        "project-2-loan-default/notebooks/01_eda_and_bias_discovery.ipynb",
+        "project-2-loan-default/notebooks/02_fairness_audit_and_mitigation.ipynb",
+        "project-2-loan-default/notebooks/03_explainability_and_drift.ipynb",
+        "project-3-aml-streaming/notebooks/01_eda_and_graph_features.ipynb",
+        "project-3-aml-streaming/notebooks/02_unsupervised_anomaly_prototyping.ipynb",
+    }
+    found_rel = {p.relative_to(repo_root).as_posix() for p in notebooks}
+    assert required_notebooks.issubset(found_rel)  # nosec B101
 
     for nb_path in notebooks:
         project_dir = nb_path.parents[1]
