@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.30](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.29...v0.5.30) (2026-11-19)
+
+
+### Bug Fixes
+
+* **governance:** enforce production model in notebooks, scan custom airflow image, and sync compliance numpy pin ([#204](https://github.com/SatyaIFD/mlops-governance-reference/issues/204)) ([3f2e825](https://github.com/SatyaIFD/mlops-governance-reference/commit/3f2e8251c78e67c813b742a50474593c896d5ce0))
+
 ## [0.5.29](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.28...v0.5.29) (2026-11-19)
 
 
