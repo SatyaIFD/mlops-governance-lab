@@ -105,7 +105,10 @@ services:
     restart: "no"
 
   airflow-standalone:
-    image: apache/airflow:3.4.0
+    build:
+      context: .
+      dockerfile: airflow.Dockerfile
+    image: mlops-airflow-custom:3.4.0
     container_name: mlops-airflow
     user: "${DOCKER_UID:-1000}:0"
     group_add:
@@ -126,7 +129,6 @@ services:
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/db/airflow.db
-      - _PIP_ADDITIONAL_REQUIREMENTS=pandas==2.3.3 numpy==2.5.4 pyarrow==26.0.1 httpx==0.28.1 scikit-learn==1.9.1 xgboost==3.4.1 mlflow==3.18.0
       - EXPECTED_API_KEY=${EXPECTED_API_KEY:?EXPECTED_API_KEY must be set in .env or environment}
       - LOAN_API_URL=http://mlops-api-gateway:8081/api/v1/loan-sim/predict
       - LOAN_HMAC_SECRET_KEY=${LOAN_HMAC_SECRET_KEY:?LOAN_HMAC_SECRET_KEY must be set in .env or environment}

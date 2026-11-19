@@ -60,6 +60,8 @@ class StreamingIngestionEngine:
         self.dlq_path = Path(dlq_output_dir)
         self.dlq_path.mkdir(parents=True, exist_ok=True)
         self.dlq_log_file = self.dlq_path / "dead_letter_queue.jsonl"
+        self.dlq_log_file.parent.mkdir(parents=True, exist_ok=True)
+        self.dlq_log_file.touch(exist_ok=True)
         self.pseudonymize_accounts = pseudonymize_accounts
         self.pseudonymizer = pseudonymizer or KeyVersionedPseudonymizer()
 
