@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.31](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.30...v0.5.31) (2026-11-19)
+
+
+### Bug Fixes
+
+* **governance:** pin airflow.Dockerfile base image digest for reproducible builds ([#206](https://github.com/SatyaIFD/mlops-governance-reference/issues/206)) ([ad301bf](https://github.com/SatyaIFD/mlops-governance-reference/commit/ad301bff1b66887769796bcddedfb26902f21fad))
+
 ## [0.5.30](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.29...v0.5.30) (2026-11-19)
 
 
