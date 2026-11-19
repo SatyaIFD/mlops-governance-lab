@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.29](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.28...v0.5.29) (2026-11-19)
+
+
+### Bug Fixes
+
+* **governance:** remove old notebooks, add airflow.Dockerfile, and add notebook CI test ([#202](https://github.com/SatyaIFD/mlops-governance-reference/issues/202)) ([58c028f](https://github.com/SatyaIFD/mlops-governance-reference/commit/58c028fa3a6b182de25a7df64b474a718b9cb38e))
+
 ## [0.5.28](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.27...v0.5.28) (2026-11-18)
 
 
