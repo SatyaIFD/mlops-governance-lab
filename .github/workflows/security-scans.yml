@@ -39,6 +39,7 @@ jobs:
           docker build -t loan-security-test -f project-2-loan-default/Dockerfile .
           docker build -t aml-security-test -f project-3-aml-streaming/Dockerfile .
           docker build -t mlflow-security-test -f mlflow.Dockerfile .
+          docker build -t airflow-security-test -f airflow.Dockerfile .
 
       - name: Run Trivy Vulnerability Scanner (Project 1 - Fraud)
         uses: aquasecurity/trivy-action@v0.36.0
@@ -87,7 +88,7 @@ jobs:
       - name: Run Trivy Vulnerability Scanner (Airflow Standalone)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: 'apache/airflow:3.4.0'
+          image-ref: 'airflow-security-test'
           format: 'table'
           exit-code: '0'
           ignore-unfixed: true
