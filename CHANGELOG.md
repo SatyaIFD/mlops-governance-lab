@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.32](https://github.com/SatyaIFD/mlops-governance-lab/compare/v0.5.31...v0.5.32) (2026-11-19)
+
+
+### Documentation
+
+* **governance:** rebrand to mlops-governance-lab and align all docs factually ([#208](https://github.com/SatyaIFD/mlops-governance-lab/issues/208)) ([12a2097](https://github.com/SatyaIFD/mlops-governance-lab/commit/12a209709dc7735981911646078d8f21a77dc8a0))
+
 ## [0.5.31](https://github.com/SatyaIFD/mlops-governance-reference/compare/v0.5.30...v0.5.31) (2026-11-19)
 
 
