@@ -105,16 +105,16 @@
         "model_version": "v13",
         "decision_threshold": 0.1358,
         "demographic_parity_status": "INCONCLUSIVE (CI_STRADDLES_THRESHOLD)",
-        "disparate_impact_ratio": 0.8527,
+        "disparate_impact_ratio": 0.8814,
         "di_95_ci": [
-            0.7654,
-            0.9499
+            0.7946,
+            0.9776
         ],
         "min_cohort_size_required": 30,
-        "protected_cohort_count": 300,
-        "baseline_cohort_count": 300,
-        "protected_approval_rate": 0.6367,
-        "baseline_approval_rate": 0.7467
+        "protected_cohort_count": 320,
+        "baseline_cohort_count": 320,
+        "protected_approval_rate": 0.65,
+        "baseline_approval_rate": 0.7375
     },
     "live_telemetry_fairness_by_source": {
         "synthetic_representative_simulation": {
@@ -122,16 +122,16 @@
             "model_version": "v13",
             "decision_threshold": 0.1358,
             "demographic_parity_status": "INCONCLUSIVE (CI_STRADDLES_THRESHOLD)",
-            "disparate_impact_ratio": 0.8527,
+            "disparate_impact_ratio": 0.8814,
             "di_95_ci": [
-                0.7654,
-                0.9499
+                0.7946,
+                0.9776
             ],
             "min_cohort_size_required": 30,
-            "protected_cohort_count": 300,
-            "baseline_cohort_count": 300,
-            "protected_approval_rate": 0.6367,
-            "baseline_approval_rate": 0.7467
+            "protected_cohort_count": 320,
+            "baseline_cohort_count": 320,
+            "protected_approval_rate": 0.65,
+            "baseline_approval_rate": 0.7375
         }
     },
     "live_telemetry_fairness_by_policy": {
@@ -140,16 +140,16 @@
             "model_version": "v13",
             "decision_threshold": 0.1358,
             "demographic_parity_status": "INCONCLUSIVE (CI_STRADDLES_THRESHOLD)",
-            "disparate_impact_ratio": 0.8527,
+            "disparate_impact_ratio": 0.8814,
             "di_95_ci": [
-                0.7654,
-                0.9499
+                0.7946,
+                0.9776
             ],
             "min_cohort_size_required": 30,
-            "protected_cohort_count": 300,
-            "baseline_cohort_count": 300,
-            "protected_approval_rate": 0.6367,
-            "baseline_approval_rate": 0.7467
+            "protected_cohort_count": 320,
+            "baseline_cohort_count": 320,
+            "protected_approval_rate": 0.65,
+            "baseline_approval_rate": 0.7375
         }
     }
 }

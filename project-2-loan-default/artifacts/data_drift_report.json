@@ -74,29 +74,29 @@
         "min_rows_required": 500,
         "observation_count": 0,
         "counts_by_source": {
-            "synthetic_representative_simulation": 600
+            "synthetic_representative_simulation": 640
         }
     },
     "synthetic_telemetry_drift": {
         "status": "STABLE",
         "data_source": "synthetic_representative_simulation",
-        "observation_count": 600,
+        "observation_count": 640,
         "drift_detected_alert": false,
         "metrics": {
             "CreditScore": {
-                "psi_value": 0.0171,
+                "psi_value": 0.0136,
                 "status": "STABLE"
             },
             "Income": {
-                "psi_value": 0.0065,
+                "psi_value": 0.0072,
                 "status": "STABLE"
             },
             "LoanAmount": {
-                "psi_value": 0.0231,
+                "psi_value": 0.0173,
                 "status": "STABLE"
             },
             "DTIRatio": {
-                "psi_value": 0.0615,
+                "psi_value": 0.0626,
                 "status": "STABLE"
             }
         }

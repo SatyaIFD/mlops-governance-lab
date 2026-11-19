@@ -572,3 +572,57 @@ def test_gdpr_purge_mid_compression_race_does_not_resurrect_purged_user(
     with gzip.open(rot_gz, "rt", encoding="utf-8") as gz_in:
         gz_rows = [json.loads(line) for line in gz_in if line.strip()]
     assert [r["seq"] for r in gz_rows] == [11]  # nosec B101
+
+
+def test_notebooks_ast_zero_outputs_and_src_symbols():
+    """Verifies exactly 9 notebooks exist, have 0 committed outputs, valid ASTs, and resolvable src.* imports."""
+    import ast
+
+    repo_root = Path(__file__).resolve().parents[1]
+    notebooks = sorted(
+        p
+        for p in repo_root.rglob("*.ipynb")
+        if ".ipynb_checkpoints" not in p.parts and ".git" not in p.parts
+    )
+    assert len(notebooks) == 9  # nosec B101
+
+    for nb_path in notebooks:
+        project_dir = nb_path.parents[1]
+        nb = json.loads(nb_path.read_text(encoding="utf-8"))
+        for cell in nb.get("cells", []):
+            if cell.get("cell_type") != "code":
+                continue
+            assert not cell.get("outputs"), (
+                f"Notebook {nb_path.name} has committed outputs"
+            )  # nosec B101
+            src = "".join(cell.get("source", []))
+            tree = ast.parse(src)
+            for node in ast.walk(tree):
+                if (
+                    isinstance(node, ast.ImportFrom)
+                    and node.module
+                    and node.module.startswith("src.")
+                ):
+                    mod_file = project_dir / (node.module.replace(".", "/") + ".py")
+                    assert mod_file.is_file(), (
+                        f"Missing module {mod_file} imported by {nb_path.name}"
+                    )  # nosec B101
+                    mod_tree = ast.parse(mod_file.read_text(encoding="utf-8"))
+                    defined = set()
+                    for mnode in mod_tree.body:
+                        if isinstance(
+                            mnode, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+                        ):
+                            defined.add(mnode.name)
+                        elif isinstance(mnode, ast.Assign):
+                            for tgt in mnode.targets:
+                                if isinstance(tgt, ast.Name):
+                                    defined.add(tgt.id)
+                        elif isinstance(mnode, ast.AnnAssign) and isinstance(
+                            mnode.target, ast.Name
+                        ):
+                            defined.add(mnode.target.id)
+                    for alias in node.names:
+                        assert alias.name in defined, (
+                            f"Symbol {alias.name} not found in {mod_file} (imported by {nb_path.name})"
+                        )  # nosec B101
