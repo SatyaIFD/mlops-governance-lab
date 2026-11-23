@@ -1,9 +1,9 @@
 pandas==2.3.3
 pyarrow==26.0.1
-numpy==2.5.4
+numpy==2.5.5
 scikit-learn==1.9.1
-fastapi==0.162.6
-pydantic==2.14.3
+fastapi==0.165.0
+pydantic==2.14.4
 uvicorn==0.54.0
 httpx==0.28.1
 xgboost==3.4.1
