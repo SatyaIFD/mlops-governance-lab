@@ -1,7 +1,7 @@
 name: mlops-governance-lab
 services:
   api-gateway:
-    image: nginx:1.29-alpine
+    image: nginx:1.31-alpine
     container_name: mlops-api-gateway
     ports:
       - "80:80"
